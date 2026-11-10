@@ -11,131 +11,114 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $absensi = Sekolah::absensiGuru();
-        $tanggal = collect($absensi)->pluck('tgl')->filter()->sort()->last() ?? date('Y-m-d');
-        $hari = array_values(array_filter($absensi, fn ($a) => ($a['tgl'] ?? null) === $tanggal));
-
-        $jumlah = function (string $status) use ($hari) {
-            return count(array_filter($hari, fn ($a) => ($a['status'] ?? null) === $status));
-        };
-
+        $absensi = collect(Sekolah::absensiGuru());
+        $tanggalHariIni = now()->toDateString();
+        $awalMinggu = now()->startOfWeek(Carbon::MONDAY);
+        $akhirMinggu = $awalMinggu->copy()->addDays(6);
+        $awalBulan = now()->startOfMonth();
         $guruAktif = collect(Sekolah::guru())
-            ->filter(fn (array $g) => ($g['status'] ?? 'Aktif') === 'Aktif')
-            ->pluck('id');
-        $sudahTercatat = collect($hari)
-            ->reject(fn (array $a) => in_array($a['status'] ?? null, ['Belum Absen', 'Belum Hadir'], true))
-            ->pluck('guruId')
-            ->filter()
-            ->unique();
-        $belum = $guruAktif->diff($sudahTercatat)->count();
+            ->filter(fn (array $guru) => ($guru['status'] ?? 'Aktif') === 'Aktif');
+        $idGuruAktif = $guruAktif->pluck('id')->filter()->all();
 
-        $distribusi = [
-            $jumlah('Hadir'),
-            $jumlah('Terlambat'),
-            $jumlah('Izin'),
-            $jumlah('Sakit'),
-            $jumlah('Mencurigakan'),
-            $belum,
+        $perGuruHariIni = $absensi
+            ->filter(fn (array $item) => ($item['tgl'] ?? null) === $tanggalHariIni
+                && in_array($item['guruId'] ?? null, $idGuruAktif, true))
+            ->sortBy('id')
+            ->groupBy('guruId')
+            ->map(fn ($records) => $records->last());
+        $jumlahHariIni = fn (string $status) => $perGuruHariIni
+            ->filter(fn (array $item) => ($item['status'] ?? null) === $status)
+            ->count();
+
+        $belumHadir = $guruAktif->filter(function (array $guru) use ($perGuruHariIni) {
+            $presensi = $perGuruHariIni->get($guru['id'] ?? '');
+
+            return ! $presensi || in_array($presensi['status'] ?? null, ['Belum Absen', 'Belum Hadir', 'Alpa'], true);
+        })->count();
+
+        $hariMinggu = collect(range(0, 6))->map(function (int $offset) use ($awalMinggu, $absensi, $idGuruAktif) {
+            $tanggal = $awalMinggu->copy()->addDays($offset);
+            $records = $absensi
+                ->filter(fn (array $item) => ($item['tgl'] ?? null) === $tanggal->toDateString()
+                    && in_array($item['guruId'] ?? null, $idGuruAktif, true))
+                ->sortBy('id')
+                ->groupBy('guruId')
+                ->map(fn ($guruRecords) => $guruRecords->last())
+                ->values();
+
+            return [
+                'label' => $tanggal->locale('id')->translatedFormat('D'),
+                'Hadir' => $records->where('status', 'Hadir')->count(),
+                'Terlambat' => $records->where('status', 'Terlambat')->count(),
+                'Izin' => $records->where('status', 'Izin')->count(),
+                'Sakit' => $records->where('status', 'Sakit')->count(),
+            ];
+        });
+
+        $perGuruPerHariBulanIni = $absensi
+            ->filter(fn (array $item) => ($item['tgl'] ?? '') >= $awalBulan->toDateString()
+                && ($item['tgl'] ?? '') <= now()->toDateString()
+                && in_array($item['guruId'] ?? null, $idGuruAktif, true))
+            ->sortBy('id')
+            ->groupBy(fn (array $item) => ($item['tgl'] ?? '').'|'.($item['guruId'] ?? ''))
+            ->map(fn ($records) => $records->last());
+        $statusBulanan = collect(['Hadir', 'Terlambat', 'Izin', 'Sakit', 'Alpa'])
+            ->mapWithKeys(fn (string $status) => [
+                $status => $perGuruPerHariBulanIni->filter(fn (array $item) => ($item['status'] ?? null) === $status)->count(),
+            ]);
+
+        $weekLabels = $hariMinggu->pluck('label')->all();
+        $weekSeries = [
+            'Hadir' => $hariMinggu->pluck('Hadir')->all(),
+            'Terlambat' => $hariMinggu->pluck('Terlambat')->all(),
+            'Izin' => $hariMinggu->pluck('Izin')->all(),
+            'Sakit' => $hariMinggu->pluck('Sakit')->all(),
         ];
+        $monthSeries = $statusBulanan->values()->all();
+        $weekIsDemo = collect($weekSeries)->flatten()->sum() === 0 && app()->environment('local', 'testing');
+        $monthIsDemo = $statusBulanan->sum() === 0 && app()->environment('local', 'testing');
 
-        $laporan = Sekolah::laporanBulanan();
-        $periodeLeaderboard = collect($laporan)->keys()->sortDesc()->first();
-        $labelPeriode = $periodeLeaderboard
-            ? Carbon::createFromFormat('Y-m', $periodeLeaderboard)->locale('id')->translatedFormat('F Y')
-            : '-';
-        $leaderboard = $this->leaderboard($periodeLeaderboard ? ($laporan[$periodeLeaderboard] ?? []) : []);
-
-        return view('admin.dashboard', [
-            'tanggal' => $tanggal,
-            'totalGuru' => count(Sekolah::guru()),
-            'hadir' => $jumlah('Hadir'),
-            'terlambat' => $jumlah('Terlambat'),
-            'belum' => $belum,
-            'recent' => array_reverse(array_slice($hari, -6)),
-            'distribusi' => $distribusi,
-            'disiplinGuru' => $leaderboard['disiplin'],
-            'perhatianGuru' => $leaderboard['perhatian'],
-            'periodeLeaderboard' => $labelPeriode,
-        ]);
-    }
-
-    private function leaderboard(array $laporan): array
-    {
-        $guru = collect(Sekolah::guru())->keyBy('id');
-        $stats = [];
-
-        foreach ($laporan as $baris) {
-            $id = (string) ($baris['guruId'] ?? '');
-            if ($id === '' || ! $guru->has($id)) {
-                continue;
-            }
-
-            $hadir = (int) ($baris['hadir'] ?? 0);
-            $terlambat = (int) ($baris['terlambat'] ?? 0);
-            $izin = (int) ($baris['izin'] ?? 0);
-            $sakit = (int) ($baris['sakit'] ?? 0);
-            $alpa = (int) ($baris['alpa'] ?? 0);
-
-            $stats[$id] = [
-                'hadir' => $hadir,
-                'terlambat' => $terlambat,
-                'izin' => $izin,
-                'sakit' => $sakit,
-                'alpa' => $alpa,
-                'mencurigakan' => 0,
-                'belum' => 0,
-                'total' => $hadir + $terlambat + $izin + $sakit + $alpa,
+        if ($weekIsDemo) {
+            $weekSeries = [
+                'Hadir' => [8, 10, 9, 11, 7, 0, 0],
+                'Terlambat' => [2, 1, 2, 1, 3, 0, 0],
+                'Izin' => [1, 0, 1, 1, 0, 0, 0],
+                'Sakit' => [0, 1, 0, 0, 1, 0, 0],
             ];
         }
 
-        $buatBaris = function (string $id, array $s) use ($guru): ?array {
-            $profil = $guru->get($id);
-            if (! $profil) {
-                return null;
-            }
+        if ($monthIsDemo) {
+            $monthSeries = [106, 18, 8, 4, 2];
+        }
 
-            return array_merge($s, [
-                'id' => $id,
-                'nama' => $profil['nama'] ?? '-',
-                'mapel' => $profil['mapel'] ?? '-',
-                'foto' => $profil['foto'] ?? '',
-                'persen' => $s['total'] > 0 ? (int) round(($s['hadir'] / $s['total']) * 100) : 0,
-            ]);
-        };
+        $guruById = $guruAktif->keyBy('id');
+        $recent = $absensi
+            ->filter(fn (array $item) => isset($guruById[$item['guruId'] ?? '']))
+            ->sortByDesc(fn (array $item) => ($item['tgl'] ?? '').' '.($item['jam'] ?? '00:00'))
+            ->take(8)
+            ->values()
+            ->map(fn (array $item) => $item + ['guru' => $guruById[$item['guruId']]['nama'] ?? '-'])
+            ->all();
 
-        $disiplin = collect($stats)
-            ->filter(fn (array $s) => $s['hadir'] > 0
-                && $s['terlambat'] === 0
-                && $s['izin'] === 0
-                && $s['sakit'] === 0
-                && $s['alpa'] === 0)
-            ->map(fn (array $s, string $id) => $buatBaris($id, $s))
-            ->filter()
-            ->sortByDesc(fn (array $g) => ($g['hadir'] * 1000) + $g['total'])
-            ->take(5)
-            ->values();
-
-        $perhatian = collect($stats)
-            ->map(function (array $s, string $id) use ($buatBaris) {
-                $baris = $buatBaris($id, $s);
-                if (! $baris) {
-                    return null;
-                }
-
-                $baris['skor'] = ($s['terlambat'] * 2)
-                    + ($s['izin'] * 2)
-                    + $s['sakit']
-                    + ($s['alpa'] * 4);
-                $baris['masalah'] = $s['terlambat'] + $s['izin'] + $s['sakit'] + $s['alpa'];
-
-                return $baris;
-            })
-            ->filter(fn (?array $g) => $g !== null && $g['skor'] > 0)
-            ->sortByDesc(fn (array $g) => ($g['skor'] * 1000) + ($g['terlambat'] * 10) + $g['alpa'])
-            ->take(5)
-            ->values();
-
-        return ['disiplin' => $disiplin, 'perhatian' => $perhatian];
+        return view('admin.dashboard', [
+            'tanggal' => $tanggalHariIni,
+            'totalGuru' => $guruAktif->count(),
+            'hadir' => $jumlahHariIni('Hadir'),
+            'terlambat' => $jumlahHariIni('Terlambat'),
+            'belum' => $belumHadir,
+            'izin' => $jumlahHariIni('Izin'),
+            'sakit' => $jumlahHariIni('Sakit'),
+            'alpa' => $jumlahHariIni('Alpa'),
+            'weekLabel' => $awalMinggu->locale('id')->translatedFormat('d M').' – '.$akhirMinggu->locale('id')->translatedFormat('d M Y'),
+            'weekLabels' => $weekLabels,
+            'weekSeries' => $weekSeries,
+            'weekIsDemo' => $weekIsDemo,
+            'monthLabel' => now()->locale('id')->translatedFormat('F Y'),
+            'monthSeries' => $monthSeries,
+            'monthTotal' => $monthIsDemo ? array_sum($monthSeries) : $statusBulanan->sum(),
+            'monthIsDemo' => $monthIsDemo,
+            'recent' => $recent,
+        ]);
     }
 
     public function toggleFeature(Request $request)

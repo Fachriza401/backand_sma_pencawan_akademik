@@ -40,6 +40,7 @@ Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(functi
     Route::get('/pemulihan-akun', [PasswordRecoveryController::class, 'adminIndex'])->name('pemulihan-akun');
     Route::post('/pemulihan-akun/{reference}/setujui', [PasswordRecoveryController::class, 'approve'])->whereAlphaNumeric('reference')->name('pemulihan-akun.approve');
     Route::post('/pemulihan-akun/{reference}/tolak', [PasswordRecoveryController::class, 'reject'])->whereAlphaNumeric('reference')->name('pemulihan-akun.reject');
+    Route::post('/pemulihan-akun/reset-manual', [PasswordRecoveryController::class, 'manualReset'])->name('pemulihan-akun.reset-manual');
     Route::get('/informasi', [InformasiController::class, 'index'])->name('informasi');
     Route::post('/informasi/simpan', [InformasiController::class, 'simpan'])->name('informasi.simpan');
     Route::post('/informasi/hapus', [InformasiController::class, 'hapus'])->name('informasi.hapus');
@@ -64,13 +65,15 @@ Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(functi
     Route::post('/jadwal-kelas/hapus', [AdminJadwalController::class, 'hapusKelas'])->name('jadwal-kelas.hapus');
 
     Route::get('/absensi', [AbsensiController::class, 'index'])->name('absensi');
-    Route::post('/absensi/verifikasi', [AbsensiController::class, 'verifikasi'])->name('absensi.verifikasi');
     Route::post('/absensi/status', [AbsensiController::class, 'status'])->name('absensi.status');
+    Route::post('/absensi/tambah-manual', [AbsensiController::class, 'tambahManual'])->name('absensi.tambah-manual');
+    Route::post('/absensi/rapikan-status-lama', [AbsensiController::class, 'rapikanStatusLama'])->name('absensi.rapikan-status-lama');
     Route::post('/absensi/hapus', [AbsensiController::class, 'hapus'])->name('absensi.hapus');
     Route::get('/absensi/ekspor', [AbsensiController::class, 'ekspor'])->name('absensi.ekspor');
 
     Route::get('/laporan', [LaporanController::class, 'index'])->name('laporan');
     Route::get('/laporan/ekspor', [LaporanController::class, 'ekspor'])->name('laporan.ekspor');
+    Route::post('/laporan/catatan', [LaporanController::class, 'simpanCatatan'])->name('laporan.catatan');
 });
 
 Route::middleware(['role:guru'])->prefix('guru')->name('guru.')->group(function () {
@@ -83,7 +86,12 @@ Route::middleware(['role:guru'])->prefix('guru')->name('guru.')->group(function 
     });
     Route::get('/absensi-siswa', [AbsensiSiswaController::class, 'index'])->name('absensi-siswa');
     Route::post('/absensi-siswa', [AbsensiSiswaController::class, 'store'])->name('absensi-siswa.store');
+    Route::post('/absensi-siswa/siswa', [AbsensiSiswaController::class, 'simpanSiswa'])->name('absensi-siswa.siswa.simpan');
+    Route::delete('/absensi-siswa/siswa', [AbsensiSiswaController::class, 'hapusSiswa'])->name('absensi-siswa.siswa.hapus');
     Route::get('/nilai', [NilaiController::class, 'index'])->name('nilai');
     Route::post('/nilai', [NilaiController::class, 'store'])->name('nilai.store');
+    Route::post('/nilai/impor', [NilaiController::class, 'impor'])->name('nilai.impor');
+    Route::get('/nilai/ekspor', [NilaiController::class, 'ekspor'])->name('nilai.ekspor');
     Route::get('/rapor', [NilaiController::class, 'rapor'])->name('rapor');
+    Route::get('/rapor/ekspor', [NilaiController::class, 'eksporRapor'])->name('rapor.ekspor');
 });

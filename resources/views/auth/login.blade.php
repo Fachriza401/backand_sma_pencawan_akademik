@@ -31,8 +31,8 @@
                     <img src="{{ asset('assets/logo-pencawan.png') }}" alt="" class="h-full w-full object-contain">
                 </span>
                 <span>
-                    <span class="block text-sm font-bold tracking-wide">SIGAP <span class="font-medium">· SMA Pencawan</span></span>
-                    <span class="mt-0.5 block text-xs text-blue-100/80">Sistem Informasi Kehadiran &amp; Agenda Pengajar</span>
+                    <span class="block text-sm font-bold tracking-wide">SIAKAD <span class="font-medium">· SMA Pencawan</span></span>
+                    <span class="mt-0.5 block text-xs text-blue-100/80">Sistem Informasi Akademik</span>
                 </span>
             </a>
 
@@ -95,8 +95,8 @@
                     <img src="{{ asset('assets/logo-pencawan.png') }}" alt="" class="h-full w-full object-contain">
                 </span>
                 <span class="text-xs font-semibold leading-4 drop-shadow">
-                    SIGAP · SMA Pencawan<br>
-                    <span class="font-normal text-blue-100">Sistem Informasi Kehadiran &amp; Agenda Pengajar</span>
+                    SIAKAD · SMA Pencawan<br>
+                    <span class="font-normal text-blue-100">Sistem Informasi Akademik</span>
                 </span>
             </a>
 

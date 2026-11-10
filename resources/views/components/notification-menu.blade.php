@@ -24,6 +24,7 @@
         const count = root.querySelector('[data-notification-count]');
         const list = root.querySelector('[data-notification-list]');
         const status = root.querySelector('[data-notification-status]');
+        let refreshing = false;
 
         const render = (items) => {
             list.replaceChildren();
@@ -51,10 +52,13 @@
         };
 
         const refresh = async () => {
+            if (refreshing) return;
+            refreshing = true;
             try {
                 const response = await fetch(root.dataset.url, {
                     headers: { Accept: 'application/json' },
                     credentials: 'same-origin',
+                    cache: 'no-store',
                 });
                 if (!response.ok) throw new Error(`Notifikasi gagal dimuat (${response.status}).`);
 
@@ -68,6 +72,8 @@
             } catch (error) {
                 status.textContent = 'Notifikasi sementara tidak dapat dimuat.';
                 console.error(error);
+            } finally {
+                refreshing = false;
             }
         };
 
@@ -79,6 +85,12 @@
         });
 
         refresh();
-        window.setInterval(refresh, 15000);
+        window.setInterval(() => {
+            if (!document.hidden) refresh();
+        }, 5000);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) refresh();
+        });
+        window.addEventListener('focus', refresh);
     })();
 </script>

@@ -13,7 +13,7 @@
         <section class="auth-card-enter w-full max-w-lg rounded-[1.75rem] border border-white/80 bg-white/90 p-5 shadow-[0_24px_70px_rgba(15,54,130,.16)] backdrop-blur-xl sm:p-8">
             <a href="{{ route('login') }}" class="mb-6 inline-flex items-center gap-3">
                 <img src="{{ asset('assets/logo-pencawan.png') }}" alt="" class="h-11 w-11 object-contain shadow-sm">
-                <span class="text-sm font-bold text-blue-950">SIGAP · SMA Pencawan<span class="block text-xs font-normal text-slate-500">Sistem Informasi Kehadiran &amp; Agenda Pengajar</span></span>
+                <span class="text-sm font-bold text-blue-950">SIAKAD · SMA Pencawan<span class="block text-xs font-normal text-slate-500">Sistem Informasi Akademik</span></span>
             </a>
 
             @if ($mode === 'request')

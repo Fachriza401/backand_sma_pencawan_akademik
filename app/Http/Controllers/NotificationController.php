@@ -14,11 +14,8 @@ class NotificationController extends Controller
     {
         $items = array_values(array_filter(
             Sekolah::absensiGuru(),
-            fn (array $attendance) => ($attendance['status'] ?? null) === 'Mencurigakan'
-                || (
-                    in_array(($attendance['status'] ?? null), ['Izin', 'Sakit'], true)
-                    && ($attendance['verifikasi'] ?? null) === 'Menunggu'
-                )
+            fn (array $attendance) => in_array(($attendance['status'] ?? null), ['Izin', 'Sakit'], true)
+                && ($attendance['verifikasi'] ?? null) === 'Menunggu'
         ));
         usort($items, fn (array $a, array $b) => strcmp(
             ($b['tgl'] ?? '').($b['jam'] ?? ''),
@@ -31,7 +28,7 @@ class NotificationController extends Controller
 
             return [
                 'id' => (string) ($attendance['id'] ?? ''),
-                'title' => $status === 'Mencurigakan' ? 'Presensi mencurigakan' : 'Pengajuan '.strtolower($status),
+                'title' => 'Pengajuan '.strtolower($status),
                 'message' => ($guru['nama'] ?? 'Guru').' · '.($attendance['tgl'] ?? '-').' '.($attendance['jam'] ?? ''),
                 'url' => route('admin.absensi', ['tgl' => $attendance['tgl'] ?? null]),
             ];

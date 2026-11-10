@@ -12,16 +12,13 @@ class GuruImportReader
 {
     private const HEADERS = ['nip', 'nama', 'mapel', 'status', 'username', 'email', 'password'];
 
+    private const OPTIONAL_HEADERS = ['telepon'];
+
     private const MAX_ROWS = 100;
 
     public function read(UploadedFile $file): array
     {
-        $extension = strtolower($file->getClientOriginalExtension());
-        $rows = match ($extension) {
-            'csv' => $this->readCsv($file->getRealPath()),
-            'xlsx' => $this->readXlsx($file->getRealPath()),
-            default => throw new InvalidArgumentException('Format file harus .xlsx atau .csv.'),
-        };
+        $rows = $this->readTable($file);
 
         if ($rows === []) {
             throw new InvalidArgumentException('File tidak berisi data guru.');
@@ -41,7 +38,7 @@ class GuruImportReader
         foreach ($rows as $row) {
             $values = [];
             foreach ($headers as $index => $header) {
-                if (in_array($header, self::HEADERS, true)) {
+                if (in_array($header, [...self::HEADERS, ...self::OPTIONAL_HEADERS], true)) {
                     $values[$header] = trim((string) ($row[$index] ?? ''));
                 }
             }
@@ -57,6 +54,17 @@ class GuruImportReader
         }
 
         return $result;
+    }
+
+    public function readTable(UploadedFile $file): array
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        return match ($extension) {
+            'csv' => $this->readCsv($file->getRealPath()),
+            'xlsx' => $this->readXlsx($file->getRealPath()),
+            default => throw new InvalidArgumentException('Format file harus .xlsx atau .csv.'),
+        };
     }
 
     private function readCsv(string $path): array

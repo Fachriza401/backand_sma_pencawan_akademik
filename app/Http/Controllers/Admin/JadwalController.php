@@ -33,11 +33,17 @@ class JadwalController extends Controller
             $kelas = Sekolah::daftarKelas()[0];
         }
 
+        $hariTerpilih = (string) $request->query('hari', Sekolah::HARI[0]);
+        if (!in_array($hariTerpilih, Sekolah::HARI, true)) {
+            $hariTerpilih = Sekolah::HARI[0];
+        }
+
         $guru = Sekolah::guru();
 
         return view('admin.jadwal-kelas', [
             'daftarKelas' => Sekolah::daftarKelas(),
             'kelas' => $kelas,
+            'hariTerpilih' => $hariTerpilih,
             'jadwal' => Sekolah::jadwal(),
             'hari' => Sekolah::HARI,
             'jam' => Sekolah::jamPelajaran(),

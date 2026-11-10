@@ -59,7 +59,7 @@ class RestoreRememberedLogin
             'user' => $account['user'],
             'email' => $account['email'] ?? '',
             'role' => $account['role'],
-            'nama' => $account['nama'],
+            'nama' => ($account['role'] ?? null) === 'admin' ? 'Admin' : $account['nama'],
             'foto' => $account['foto'] ?? '',
             'guruId' => $account['guruId'] ?? null,
         ]);

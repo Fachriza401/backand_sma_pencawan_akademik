@@ -9,15 +9,15 @@
 </head>
 <body>
 <div class="app-shell">
-    <aside class="sidebar">
+    <aside class="sidebar" id="admin-sidebar">
         <div class="sidebar-brand">
             <div class="logo-box">
                 <img src="{{ asset('assets/logo-pencawan.png') }}" alt="Logo SMA Pencawan">
             </div>
             <div class="admin-brand-copy">
-                <strong>SIGAP</strong>
+                <strong>SIAKAD</strong>
                 <span>SMA Pencawan</span>
-                <small>Sistem Informasi Kehadiran &amp; Agenda Pengajar</small>
+                <small>Sistem Informasi Akademik</small>
             </div>
         </div>
 
@@ -38,10 +38,10 @@
     <div class="main-area">
         <header class="topbar">
             <div class="topbar-left">
-                <button class="burger" type="button" aria-label="Toggle menu">☰</button>
+                <button class="burger" type="button" aria-label="Toggle menu" aria-controls="admin-sidebar" aria-expanded="false">☰</button>
                 <div class="topbar-brand-copy">
-                    <h1>SIGAP <span>· SMA Pencawan</span></h1>
-                    <p>Sistem Informasi Kehadiran &amp; Agenda Pengajar</p>
+                    <h1>@yield('heading', 'Portal Admin')</h1>
+                    <p>SMA Pencawan</p>
                 </div>
             </div>
 
@@ -49,11 +49,16 @@
                 <x-notification-menu :url="route('admin.notifikasi')" label="Notifikasi Admin" />
                 <details class="admin-user-menu">
                     <summary>
-                        <span>
-                            <span class="nama">{{ session('user.nama') ?? 'Administrator' }}</span>
-                            <span class="role">ADMINISTRATOR</span>
+                        <span class="admin-user-avatar">
+                            @if (media_url(session('user.foto', '')) !== '')
+                                <img src="{{ media_url(session('user.foto', '')) }}" alt="" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
+                                <span hidden>A</span>
+                            @else
+                                <span>A</span>
+                            @endif
                         </span>
-                        <span aria-hidden="true">⌄</span>
+                        <span class="nama">Admin</span>
+                        <span class="admin-user-chevron" aria-hidden="true">⌄</span>
                     </summary>
                     <div class="admin-user-dropdown">
                         <a href="{{ route('admin.profil') }}">Profil Admin</a>
@@ -77,8 +82,24 @@
     const burger = document.querySelector('.burger');
     const sidebar = document.querySelector('.sidebar');
     if (burger && sidebar) {
+        const closeSidebar = () => {
+            sidebar.classList.remove('open');
+            burger.setAttribute('aria-expanded', 'false');
+        };
+
         burger.addEventListener('click', () => {
-            sidebar.style.transform = sidebar.style.transform === 'translateX(-100%)' ? 'translateX(0)' : 'translateX(-100%)';
+            const isOpen = sidebar.classList.toggle('open');
+            burger.setAttribute('aria-expanded', String(isOpen));
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!window.matchMedia('(max-width: 860px)').matches || !sidebar.classList.contains('open')) return;
+            if (sidebar.contains(event.target) || burger.contains(event.target)) return;
+            closeSidebar();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeSidebar();
         });
     }
 
@@ -130,5 +151,6 @@
         });
     });
 </script>
+@vite('resources/js/app.js')
 </body>
 </html>

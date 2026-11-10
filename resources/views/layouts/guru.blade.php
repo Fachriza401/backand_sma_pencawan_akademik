@@ -13,9 +13,9 @@
         <a class="guru-sidebar-brand" href="{{ route('guru.dashboard') }}">
             <img class="tb-logo" src="{{ asset('assets/logo-pencawan.png') }}" alt="">
             <div>
-                <p class="judul">SIGAP</p>
+                <p class="judul">SIAKAD</p>
                 <div class="sub">SMA Pencawan</div>
-                <small class="guru-brand-description">Sistem Informasi Kehadiran &amp; Agenda Pengajar</small>
+                <small class="guru-brand-description">Sistem Informasi Akademik</small>
             </div>
         </a>
         <nav class="guru-side-nav" aria-label="Menu guru">
@@ -26,15 +26,9 @@
             @endif
             <a class="{{ request()->routeIs('guru.absensi-siswa*') ? 'active' : '' }}" href="{{ route('guru.absensi-siswa') }}"><x-icon name="check" /> Absensi Siswa</a>
             <a class="{{ request()->routeIs('guru.nilai*') ? 'active' : '' }}" href="{{ route('guru.nilai') }}"><x-icon name="clipboard" /> Nilai Siswa</a>
-            <a class="{{ request()->routeIs('guru.rapor') ? 'active' : '' }}" href="{{ route('guru.rapor') }}"><x-icon name="file" /> Rapor</a>
+            <a class="{{ request()->routeIs('guru.rapor') ? 'active' : '' }}" href="{{ route('guru.rapor') }}"><x-icon name="file" /> Rekap Absensi</a>
         </nav>
-        <div class="guru-sidebar-foot">
-            <span>{{ session('user.nama', 'Guru') }}</span>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="guru-logout"><x-icon name="logout" /> Keluar</button>
-            </form>
-        </div>
+        <div class="guru-sidebar-foot guru-version">Versi 1.0.0 - Development</div>
     </aside>
 
     <div class="guru-main">
@@ -42,8 +36,8 @@
             <div class="guru-mobile-brand">
                 <img class="tb-logo" src="{{ asset('assets/logo-pencawan.png') }}" alt="">
                 <div>
-                    <p class="judul">SIGAP <span class="guru-brand-school">· SMA Pencawan</span></p>
-                    <div class="sub">Sistem Informasi Kehadiran &amp; Agenda Pengajar</div>
+                    <p class="judul">SIAKAD <span class="guru-brand-school">· SMA Pencawan</span></p>
+                    <div class="sub">Sistem Informasi Akademik</div>
                 </div>
             </div>
             <div class="guru-desktop-heading">
@@ -72,7 +66,7 @@
             @endif
             <a class="{{ request()->routeIs('guru.absensi-siswa*') ? 'active' : '' }}" href="{{ route('guru.absensi-siswa') }}"><x-icon name="check" /> Absensi</a>
             <a class="{{ request()->routeIs('guru.nilai*') ? 'active' : '' }}" href="{{ route('guru.nilai') }}"><x-icon name="clipboard" /> Nilai</a>
-            <a class="{{ request()->routeIs('guru.rapor') ? 'active' : '' }}" href="{{ route('guru.rapor') }}"><x-icon name="file" /> Rapor</a>
+            <a class="{{ request()->routeIs('guru.rapor') ? 'active' : '' }}" href="{{ route('guru.rapor') }}"><x-icon name="file" /> Rekap</a>
         </nav>
     </div>
 </div>

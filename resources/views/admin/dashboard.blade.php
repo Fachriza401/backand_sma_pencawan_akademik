@@ -4,249 +4,295 @@
 @section('heading', 'Dashboard Admin')
 
 @section('content')
-    <div class="page-head">
-        <div>
-            <h2>Selamat Datang, Admin!</h2>
-            <p>Ringkasan aktivitas sekolah hari ini</p>
-        </div>
-    </div>
-
-    @if (session('sukses'))
-        <div class="alert alert-hijau" role="status" style="margin-bottom:16px;">{{ session('sukses') }}</div>
-    @endif
-
-    <div class="metric-grid">
-        <div class="metric-card metric-biru">
-            <div class="metric-icon"><x-icon name="users" /></div>
-            <div class="metric-info">
-                <div class="metric-value">{{ $totalGuru }}</div>
-                <div class="metric-label">Total Guru</div>
-                <div class="metric-note">Guru terdaftar</div>
-            </div>
-        </div>
-
-        <div class="metric-card metric-hijau">
-            <div class="metric-icon"><x-icon name="check" /></div>
-            <div class="metric-info">
-                <div class="metric-value">{{ $hadir }}</div>
-                <div class="metric-label">Hadir</div>
-                <div class="metric-note">Tepat waktu hari ini</div>
-            </div>
-        </div>
-
-        <div class="metric-card metric-amber">
-            <div class="metric-icon"><x-icon name="clock" /></div>
-            <div class="metric-info">
-                <div class="metric-value">{{ $terlambat }}</div>
-                <div class="metric-label">Terlambat</div>
-                <div class="metric-note">Perlu pemantauan</div>
-            </div>
-        </div>
-
-        <div class="metric-card metric-merah">
-            <div class="metric-icon"><x-icon name="alert" /></div>
-            <div class="metric-info">
-                <div class="metric-value">{{ $belum }}</div>
-                <div class="metric-label">Belum Hadir</div>
-                <div class="metric-note">Belum ada presensi</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="dashboard-bottom">
-        <div class="card">
-            <div class="card-title-flex">
-                <div>
-                    <h3 class="card-title" style="margin-bottom:5px;">Distribusi Kehadiran</h3>
-                    <p class="card-subtitle">Komposisi status presensi guru hari ini</p>
+    <div class="admin-dashboard">
+        <section class="dashboard-top-grid" aria-label="Informasi dashboard">
+            <div class="dashboard-welcome">
+                <div class="dashboard-welcome-copy">
+                    <span class="dashboard-eyebrow">PANEL ADMINISTRATOR</span>
+                    <h2>Selamat datang, Admin</h2>
+                    <p>Pantau rekapitulasi kehadiran harian, kelola data akademik guru secara real-time, dan akses laporan penting dengan cepat dari satu dashboard.</p>
                 </div>
-                <span class="mini-chip chip-emerald">{{ array_sum($distribusi) }} catatan</span>
-            </div>
-
-            @php
-                $totalDistribusi = array_sum($distribusi);
-                $distribusiWarna = ['#16a34a', '#d97706', '#2563eb', '#0ea5e9', '#dc2626', '#94a3b8'];
-            @endphp
-
-            <div class="distribution-list" style="margin-top:16px;">
-                @foreach (['Hadir', 'Terlambat', 'Izin', 'Sakit', 'Mencurigakan', 'Belum Hadir'] as $label)
-                    @php
-                        $key = match($label) {
-                            'Hadir' => 0,
-                            'Terlambat' => 1,
-                            'Izin' => 2,
-                            'Sakit' => 3,
-                            'Mencurigakan' => 4,
-                            'Belum Hadir' => 5,
-                        };
-                        $pct = $totalDistribusi > 0 ? round(($distribusi[$key] / $totalDistribusi) * 100) : 0;
-                    @endphp
-                    <div class="distribution-row">
-                        <div class="distribution-head">
-                            <span class="distribution-label">
-                                <span class="distribution-dot" style="background:{{ $distribusiWarna[$key] }};"></span>
-                                {{ $label }}
-                            </span>
-                            <strong>{{ $distribusi[$key] }}</strong>
-                        </div>
-                        <div class="distribution-track">
-                            <div class="distribution-fill" style="width:{{ $pct }}%; background:{{ $distribusiWarna[$key] }};"></div>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-
-        <div class="card leaderboard-card">
-            <div class="card-title-flex">
-                <div>
-                    <h3 class="card-title" style="margin-bottom:5px;">
-                        <span class="title-dot dot-emerald"></span>Guru Paling Disiplin
-                    </h3>
-                    <p class="card-subtitle">Rekap {{ $periodeLeaderboard }} · selalu tepat waktu tanpa izin, sakit, atau terlambat</p>
+                <div class="dashboard-welcome-actions">
+                    <a class="btn btn-primary welcome-attendance-action" href="{{ route('admin.absensi', ['tgl' => $tanggal]) }}"><x-icon name="check" class="welcome-action-icon" /> Absensi Guru</a>
+                    <a class="btn btn-outline welcome-report-action" href="{{ route('admin.laporan') }}"><x-icon name="chart" class="welcome-action-icon" /> Laporan</a>
                 </div>
-                <span class="mini-chip chip-emerald">{{ $disiplinGuru->count() }} guru</span>
             </div>
 
-            <div class="leaderboard-list">
-                @forelse ($disiplinGuru as $g)
-                    <div class="leaderboard-item {{ $loop->first ? 'is-gold' : '' }}">
-                        <span class="rank-badge rank-{{ $loop->iteration <= 3 ? $loop->iteration : 'default' }}">{{ $loop->iteration }}</span>
-                        <img class="leaderboard-avatar"
-                             src="{{ media_url($g['foto'] ?? '') ?: 'https://i.pravatar.cc/80?u=' . urlencode($g['nama']) }}"
-                             alt="{{ $g['nama'] }}">
-                        <div class="leaderboard-main">
-                            <div class="leaderboard-name">{{ $g['nama'] }}</div>
-                            <div class="leaderboard-meta">{{ $g['mapel'] }} · {{ $g['persen'] }}% tepat waktu</div>
-                        </div>
-                        <span class="leaderboard-score">{{ $g['hadir'] }} sesi</span>
-                    </div>
-                @empty
-                    <div class="leaderboard-empty">
-                        Belum ada guru dengan rekam jejak kehadiran sempurna.
-                    </div>
-                @endforelse
-            </div>
-        </div>
-
-        <div class="card leaderboard-card">
-            <div class="card-title-flex">
-                <div>
-                    <h3 class="card-title" style="margin-bottom:5px;">
-                        <span class="title-dot dot-rose"></span>Catatan Kehadiran Perlu Perhatian
-                    </h3>
-                    <p class="card-subtitle">Rekap {{ $periodeLeaderboard }} · keterlambatan atau ketidakhadiran terbanyak</p>
+            <aside class="dashboard-system-card" aria-label="Informasi sistem">
+                <div class="dashboard-system-heading">
+                    <span class="dashboard-system-icon"><x-icon name="school" /></span>
+                    <div><span class="dashboard-panel-kicker">SISTEM INFORMASI</span><strong>SIAKAD SMA Pencawan</strong></div>
                 </div>
-                <span class="mini-chip chip-rose">{{ $perhatianGuru->count() }} guru</span>
+                <div class="dashboard-system-date">
+                    <span>Hari ini</span>
+                    <time id="dashboard-live-date" datetime="{{ now()->toDateString() }}">{{ now()->locale('id')->translatedFormat('l, d F Y') }}</time>
+                    <span id="dashboard-live-time" class="dashboard-live-time">{{ now()->format('H:i') }} WIB</span>
+                </div>
+                <div class="dashboard-system-status">
+                    <i aria-hidden="true"></i>
+                    <span><strong>Sistem beroperasi normal</strong><small>Layanan aplikasi aktif</small></span>
+                    <span class="dashboard-system-online">Aktif</span>
+                </div>
+                <div class="dashboard-system-version">
+                    <span>Versi aplikasi</span>
+                    <strong>Versi 1.0.0 - Development</strong>
+                </div>
+            </aside>
+        </section>
+
+        @if (session('sukses'))
+            <div class="alert alert-hijau" role="status" style="margin-bottom:16px;">{{ session('sukses') }}</div>
+        @endif
+
+        <section class="metric-grid dashboard-metrics dashboard-metric-cards" aria-label="Ringkasan kehadiran hari ini">
+            <article class="dashboard-metric-card metric-total">
+                <span class="dashboard-metric-icon"><x-icon name="users" /></span>
+                <div class="dashboard-metric-copy">
+                    <span class="dashboard-metric-label">Total Guru Aktif</span>
+                    <strong>{{ $totalGuru }} <small>Guru</small></strong>
+                    <span class="dashboard-metric-hint">Terdaftar dan aktif mengajar</span>
+                </div>
+                <span class="dashboard-metric-decoration" aria-hidden="true">01</span>
+            </article>
+            <article class="dashboard-metric-card metric-present">
+                <span class="dashboard-metric-icon"><x-icon name="check" /></span>
+                <div class="dashboard-metric-copy">
+                    <span class="dashboard-metric-label">Guru Hadir Hari Ini</span>
+                    <strong>{{ $hadir }}</strong>
+                    <span class="dashboard-metric-hint"><i class="presence-dot"></i> Presensi tepat waktu</span>
+                </div>
+                <span class="dashboard-metric-decoration" aria-hidden="true">02</span>
+            </article>
+            <article class="dashboard-metric-card metric-late">
+                <span class="dashboard-metric-icon"><x-icon name="clock" /></span>
+                <div class="dashboard-metric-copy">
+                    <span class="dashboard-metric-label">Guru Terlambat</span>
+                    <strong>{{ $terlambat }}</strong>
+                    <span class="dashboard-metric-hint">Perlu tindak lanjut</span>
+                </div>
+                <span class="dashboard-metric-decoration" aria-hidden="true">03</span>
+            </article>
+            <article class="dashboard-metric-card metric-away">
+                <span class="dashboard-metric-icon"><x-icon name="alert" /></span>
+                <div class="dashboard-metric-copy">
+                    <span class="dashboard-metric-label">Belum Hadir / Alpa</span>
+                    <strong>{{ $belum }}</strong>
+                    <span class="dashboard-metric-hint">Tidak hadir tanpa presensi masuk</span>
+                    <span class="dashboard-metric-breakdown"><span>Izin <b>{{ $izin }}</b></span><span>Sakit <b>{{ $sakit }}</b></span><span>Alpa <b>{{ $alpa }}</b></span></span>
+                </div>
+                <span class="dashboard-metric-decoration" aria-hidden="true">04</span>
+            </article>
+        </section>
+
+        <section class="dashboard-charts" aria-label="Grafik kehadiran guru">
+            <article class="card dashboard-chart-card">
+                <div class="dashboard-panel-heading">
+                    <div>
+                        <span class="dashboard-panel-kicker">TREN MINGGUAN</span>
+                        <h3>Rekap Kehadiran Guru</h3>
+                        <p>{{ $weekIsDemo ? 'Data contoh untuk pratinjau · bukan presensi aktual' : 'Perbandingan status kehadiran setiap hari · '.$weekLabel }}</p>
+                    </div>
+                    <span class="dashboard-panel-actions">
+                        @if ($weekIsDemo)<span class="dashboard-demo-badge">DATA CONTOH</span>@endif
+                        <span class="dashboard-panel-icon"><x-icon name="chart" /></span>
+                    </span>
+                </div>
+                <div class="dashboard-chart-area">
+                    <canvas id="weekly-attendance-chart" role="img" aria-label="Diagram batang rekap kehadiran guru selama satu minggu"></canvas>
+                    <p class="dashboard-chart-empty" id="weekly-chart-empty" @if (collect($weekSeries)->flatten()->sum() > 0) hidden @endif>Belum ada data presensi pada minggu ini.</p>
+                    <p class="dashboard-chart-empty" id="weekly-chart-error" hidden>Grafik tidak dapat dimuat. Periksa koneksi internet lalu muat ulang halaman.</p>
+                </div>
+            </article>
+
+            <article class="card dashboard-chart-card dashboard-month-chart-card">
+                <div class="dashboard-panel-heading">
+                    <div>
+                        <span class="dashboard-panel-kicker">RINGKASAN BULANAN</span>
+                        <h3>Status Kehadiran</h3>
+                        <p>{{ $monthIsDemo ? 'Data contoh untuk pratinjau · bukan presensi aktual' : 'Proporsi seluruh presensi tercatat · '.$monthLabel }}</p>
+                    </div>
+                    <span class="dashboard-panel-actions">
+                        @if ($monthIsDemo)<span class="dashboard-demo-badge">DATA CONTOH</span>@endif
+                        <span class="dashboard-panel-icon"><x-icon name="calendar" /></span>
+                    </span>
+                </div>
+                <div class="dashboard-doughnut-area">
+                    <canvas id="monthly-attendance-chart" role="img" aria-label="Diagram lingkaran persentase status kehadiran guru bulan ini"></canvas>
+                    @if ($monthTotal > 0)
+                        <div class="dashboard-doughnut-center"><strong>{{ $monthTotal }}</strong><span>catatan</span></div>
+                    @else
+                        <p class="dashboard-chart-empty" id="monthly-chart-empty">Belum ada data presensi bulan ini.</p>
+                    @endif
+                    <p class="dashboard-chart-empty" id="monthly-chart-error" hidden>Grafik tidak dapat dimuat. Periksa koneksi internet lalu muat ulang halaman.</p>
+                </div>
+                <div class="dashboard-chart-legend">
+                    <span><i class="legend-hadir"></i>Hadir</span>
+                    <span><i class="legend-terlambat"></i>Terlambat</span>
+                    <span><i class="legend-izin"></i>Izin</span>
+                    <span><i class="legend-sakit"></i>Sakit</span>
+                    <span><i class="legend-alpa"></i>Alpa</span>
+                </div>
+            </article>
+        </section>
+
+        <section class="card dashboard-recent-card">
+            <div class="card-title-flex dashboard-section-heading">
+                <div>
+                    <span class="dashboard-panel-kicker">AKTIVITAS TERKINI</span>
+                    <h3 class="card-title">Presensi Terbaru</h3>
+                    <p class="card-subtitle">Catatan presensi guru yang paling baru.</p>
+                </div>
+                <div class="dashboard-quick-links">
+                    <a class="btn btn-outline btn-sm" href="{{ route('admin.absensi') }}">Absensi Guru <span aria-hidden="true">→</span></a>
+                    <a class="btn btn-outline btn-sm" href="{{ route('admin.laporan') }}">Laporan <span aria-hidden="true">→</span></a>
+                </div>
             </div>
 
-            <div class="leaderboard-list">
-                @forelse ($perhatianGuru as $g)
-                    @php
-                        $masalah = collect([
-                            $g['terlambat'] > 0 ? $g['terlambat'] . '× terlambat' : null,
-                            $g['izin'] > 0 ? $g['izin'] . '× izin' : null,
-                            $g['sakit'] > 0 ? $g['sakit'] . '× sakit' : null,
-                            $g['mencurigakan'] > 0 ? $g['mencurigakan'] . '× mencurigakan' : null,
-                            $g['alpa'] > 0 ? $g['alpa'] . '× alpa' : null,
-                            $g['belum'] > 0 ? $g['belum'] . '× belum hadir' : null,
-                        ])->filter()->implode(' · ');
-                    @endphp
-                    <div class="leaderboard-item">
-                        <span class="rank-badge rank-{{ $loop->iteration <= 3 ? $loop->iteration : 'default' }}">{{ $loop->iteration }}</span>
-                        <img class="leaderboard-avatar"
-                             src="{{ media_url($g['foto'] ?? '') ?: 'https://i.pravatar.cc/80?u=' . urlencode($g['nama']) }}"
-                             alt="{{ $g['nama'] }}">
-                        <div class="leaderboard-main">
-                            <div class="leaderboard-name">{{ $g['nama'] }}</div>
-                            <div class="leaderboard-meta" title="{{ $masalah }}">{{ $masalah }}</div>
-                        </div>
-                        <span class="leaderboard-score warn">{{ $g['masalah'] }} catatan</span>
-                    </div>
-                @empty
-                    <div class="leaderboard-empty">
-                        Tidak ada catatan kehadiran yang perlu diperhatikan.
-                    </div>
-                @endforelse
-            </div>
-        </div>
-    </div>
-
-    <div class="card" style="margin-top:16px;">
-        <div class="card-title-flex">
-            <h3 class="card-title">Presensi Terbaru</h3>
-            <span style="font-size:12px; color:var(--teks-2);">{{ $tanggal }}</span>
-        </div>
-
-        <div class="table-wrap">
-            <table class="data">
-                <thead>
-                <tr>
-                    <th>Guru</th>
-                    <th>Jam</th>
-                    <th>Status</th>
-                    <th>Bukti Foto</th>
-                    <th>Verifikasi</th>
-                    <th>Aksi</th>
-                </tr>
-                </thead>
-                <tbody>
-                @forelse ($recent as $item)
-                    @php
-                        $g = App\Support\Sekolah::cariGuru($item['guruId'] ?? null) ?? [];
-                        $bukti = bukti_foto_list($item);
-                    @endphp
+            <div class="table-wrap">
+                <table class="data dashboard-activity-table">
+                    <thead>
                     <tr>
-                        <td>{{ $g['nama'] ?? '-' }}</td>
-                        <td>{{ $item['jam'] ?? '-' }}</td>
-                        <td>
-                            <form method="POST" action="{{ route('admin.absensi.status') }}" class="inline-form">
-                                @csrf
-                                <input type="hidden" name="id" value="{{ $item['id'] ?? '' }}">
-                                <select name="status" class="form-select status-inline" aria-label="Ubah status {{ $g['nama'] ?? 'guru' }}" onchange="this.form.submit()">
-                                    @foreach (\App\Support\Sekolah::STATUS_ABSENSI as $pilihan)
-                                        <option value="{{ $pilihan }}" @selected(($item['status'] ?? '') === $pilihan)>{{ $pilihan }}</option>
-                                    @endforeach
-                                </select>
-                            </form>
-                        </td>
-                        <td>
-                            @if ($bukti !== [])
-                                <div class="bukti-list">
-                                    @foreach ($bukti as $foto)
-                                        <a href="{{ media_url($foto) }}" target="_blank" rel="noopener" title="Lihat bukti foto">
-                                            <img class="bukti-thumb" src="{{ media_url($foto) }}" alt="Bukti foto {{ $g['nama'] ?? 'guru' }}">
-                                        </a>
-                                    @endforeach
-                                </div>
-                            @else
-                                <span class="text-muted">-</span>
-                            @endif
-                        </td>
-                        <td>
-                            <form method="POST" action="{{ route('admin.absensi.verifikasi') }}" class="inline-form">
-                                @csrf
-                                <input type="hidden" name="id" value="{{ $item['id'] ?? '' }}">
-                                <select name="status" class="form-select status-inline" aria-label="Verifikasi {{ $g['nama'] ?? 'guru' }}" onchange="this.form.submit()">
-                                    <option value="" disabled @selected(! in_array($item['verifikasi'] ?? '', ['Disetujui', 'Ditolak'], true))>Pilih</option>
-                                    <option value="Disetujui" @selected(($item['verifikasi'] ?? '') === 'Disetujui')>Disetujui</option>
-                                    <option value="Ditolak" @selected(($item['verifikasi'] ?? '') === 'Ditolak')>Ditolak</option>
-                                </select>
-                            </form>
-                        </td>
-                        <td>
-                            <form method="POST" action="{{ route('admin.absensi.hapus') }}" onsubmit="return confirm('Hapus data presensi ini? Tindakan ini tidak dapat dibatalkan.');">
-                                @csrf
-                                <input type="hidden" name="id" value="{{ $item['id'] ?? '' }}">
-                                <button class="btn btn-merah btn-sm" type="submit">Hapus</button>
-                            </form>
-                        </td>
+                        <th>Nama Guru</th>
+                        <th>Waktu Masuk</th>
+                        <th>Status</th>
                     </tr>
-                @empty
-                    <tr><td colspan="6" style="text-align:center; color:var(--teks-2);">Belum ada data presensi</td></tr>
-                @endforelse
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody>
+                    @forelse ($recent as $item)
+                        @php
+                            $status = $item['status'] ?? '';
+                            $statusLabel = $status === 'Hadir' ? 'Tepat Waktu' : $status;
+                            $statusClass = match ($status) {
+                                'Hadir' => 'is-on-time',
+                                'Terlambat' => 'is-late',
+                                'Sakit', 'Alpa', 'Belum Hadir', 'Belum Absen' => 'is-absent',
+                                'Izin' => 'is-leave',
+                                default => 'is-other',
+                            };
+                        @endphp
+                        <tr>
+                            <td>
+                                <div class="dashboard-person">
+                                    <span class="dashboard-person-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($item['guru'] ?? '-', 0, 1)) }}</span>
+                                    <span><strong>{{ $item['guru'] ?? '-' }}</strong><small>{{ \Illuminate\Support\Carbon::parse($item['tgl'])->locale('id')->translatedFormat('d M Y') }}</small></span>
+                                </div>
+                            </td>
+                            <td>{{ $item['jam'] ?: '—' }}</td>
+                            <td><span class="dashboard-status-badge {{ $statusClass }}"><i></i>{{ $statusLabel ?: 'Belum ada status' }}</span></td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="3" class="dashboard-empty">Belum ada aktivitas presensi yang dapat ditampilkan.</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script>
+        (() => {
+            const weeklyCanvas = document.getElementById('weekly-attendance-chart');
+            const monthlyCanvas = document.getElementById('monthly-attendance-chart');
+            if (typeof Chart === 'undefined') {
+                document.getElementById('weekly-chart-error').hidden = false;
+                document.getElementById('weekly-chart-empty').hidden = true;
+                document.getElementById('monthly-chart-error').hidden = false;
+                const monthlyEmpty = document.getElementById('monthly-chart-empty');
+                if (monthlyEmpty) monthlyEmpty.hidden = true;
+                return;
+            }
+
+            const colors = {
+                hadir: '#16a36a',
+                terlambat: '#f59e0b',
+                izin: '#3b82f6',
+                sakit: '#8b5cf6',
+                alpa: '#ef4444',
+            };
+            const weeklyLabels = @json($weekLabels);
+            const weeklySeries = @json($weekSeries);
+            const monthSeries = @json($monthSeries);
+            const chartFont = { family: 'Inter, ui-sans-serif, system-ui, sans-serif' };
+
+            if (weeklyCanvas) {
+                new Chart(weeklyCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: weeklyLabels,
+                        datasets: [
+                            { label: 'Hadir', data: weeklySeries.Hadir, backgroundColor: colors.hadir, borderRadius: 5, maxBarThickness: 18 },
+                            { label: 'Terlambat', data: weeklySeries.Terlambat, backgroundColor: colors.terlambat, borderRadius: 5, maxBarThickness: 18 },
+                            { label: 'Izin', data: weeklySeries.Izin, backgroundColor: colors.izin, borderRadius: 5, maxBarThickness: 18 },
+                            { label: 'Sakit', data: weeklySeries.Sakit, backgroundColor: colors.sakit, borderRadius: 5, maxBarThickness: 18 },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 7, boxHeight: 7, padding: 18, font: { ...chartFont, size: 11 } } },
+                            tooltip: { backgroundColor: '#14213d', padding: 12, usePointStyle: true },
+                        },
+                        scales: {
+                            x: { grid: { display: false }, border: { display: false }, ticks: { color: '#728096', font: { ...chartFont, size: 11 } } },
+                            y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1, color: '#8995a8', font: { ...chartFont, size: 10 } }, grid: { color: '#edf1f6', drawTicks: false }, border: { display: false } },
+                        },
+                    },
+                });
+            }
+
+            if (monthlyCanvas && {{ $monthTotal }} > 0) {
+                new Chart(monthlyCanvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Hadir', 'Terlambat', 'Izin', 'Sakit', 'Alpa'],
+                        datasets: [{
+                            data: monthSeries,
+                            backgroundColor: [colors.hadir, colors.terlambat, colors.izin, colors.sakit, colors.alpa],
+                            borderColor: '#fff',
+                            borderWidth: 4,
+                            hoverOffset: 6,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '72%',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { backgroundColor: '#14213d', padding: 12, callbacks: { label: (context) => `${context.label}: ${context.raw} (${context.formattedValue ? (context.raw / {{ $monthTotal }} * 100).toFixed(1) : 0}%)` } },
+                        },
+                    },
+                });
+            }
+        })();
+    </script>
+    <script>
+        (() => {
+            const dateElement = document.getElementById('dashboard-live-date');
+            const timeElement = document.getElementById('dashboard-live-time');
+            if (!dateElement || !timeElement) return;
+
+            const updateClock = () => {
+                const now = new Date();
+                dateElement.dateTime = new Intl.DateTimeFormat('sv-SE').format(now);
+                dateElement.textContent = new Intl.DateTimeFormat('id-ID', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                }).format(now);
+                timeElement.textContent = `${new Intl.DateTimeFormat('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hourCycle: 'h23',
+                }).format(now)} WIB`;
+            };
+
+            updateClock();
+            window.setInterval(updateClock, 30000);
+        })();
+    </script>
 @endsection

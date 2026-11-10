@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\Student;
+
 /**
  * Penyimpanan data aplikasi akademik SMA Pencawan.
  * Data dummy disimpan sebagai file JSON di storage/app/data agar perubahan
@@ -111,7 +113,9 @@ class Sekolah
             ],
 
             'nilai' => [],
+            'catatan_nilai_siswa' => [],
             'absensi_siswa' => [],
+            'catatan_absensi_siswa' => [],
         ];
     }
 
@@ -324,6 +328,34 @@ class Sekolah
         )));
     }
 
+    public static function mapelDiajar(string $guruId): array
+    {
+        return array_values(array_unique(array_map(
+            fn (array $jadwal) => $jadwal['mapel'],
+            array_filter(
+                self::jadwal(),
+                fn (array $jadwal) => ($jadwal['idGuru'] ?? null) === $guruId
+                    && isset($jadwal['mapel'], $jadwal['kelas'])
+                    && in_array($jadwal['kelas'], self::daftarKelas(), true)
+                    && trim((string) $jadwal['mapel']) !== ''
+            )
+        )));
+    }
+
+    public static function kelasDiajarUntukMapel(string $guruId, string $mapel): array
+    {
+        return array_values(array_unique(array_map(
+            fn (array $jadwal) => $jadwal['kelas'],
+            array_filter(
+                self::jadwal(),
+                fn (array $jadwal) => ($jadwal['idGuru'] ?? null) === $guruId
+                    && ($jadwal['mapel'] ?? null) === $mapel
+                    && isset($jadwal['kelas'])
+                    && in_array($jadwal['kelas'], self::daftarKelas(), true)
+            )
+        )));
+    }
+
     public static function absensiGuru(): array
     {
         return self::get('absensi_guru');
@@ -409,6 +441,17 @@ class Sekolah
 
     public static function siswaKelas(string $kelas): array
     {
+        $terdaftar = Student::query()
+            ->where('kelas', $kelas)
+            ->where('status', 'Aktif')
+            ->orderBy('nama_lengkap')
+            ->pluck('nama_lengkap')
+            ->all();
+
+        if ($terdaftar !== []) {
+            return $terdaftar;
+        }
+
         return self::siswa()[$kelas] ?? [];
     }
 
@@ -537,13 +580,37 @@ class Sekolah
         return $hasil;
     }
 
+    public static function rekapAbsensiSiswa(string $kelas, string $bulan): array
+    {
+        $semua = self::get('absensi_siswa');
+        $dataKelas = $semua[$kelas] ?? [];
+        if (! is_array($dataKelas)) {
+            return [];
+        }
+
+        if (self::isAbsensiSiswaLegacy($dataKelas)) {
+            $tanggal = date('Y-m-d');
+
+            return str_starts_with($tanggal, $bulan) ? [$tanggal => $dataKelas] : [];
+        }
+
+        return array_filter(
+            $dataKelas,
+            fn ($status, $tanggal) => is_string($tanggal)
+                && preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal) === 1
+                && str_starts_with($tanggal, $bulan)
+                && is_array($status),
+            ARRAY_FILTER_USE_BOTH
+        );
+    }
+
     public static function simpanAbsensiSiswa(string $kelas, array $status, ?string $tanggal = null): void
     {
         $semua = self::get('absensi_siswa');
         $bersih = [];
         foreach (self::siswaKelas($kelas) as $nama) {
             $nilai = $status[$nama] ?? 'Hadir';
-            if (! in_array($nilai, ['Hadir', 'Izin', 'Sakit', 'Alpa'], true)) {
+            if (! in_array($nilai, ['Hadir', 'Terlambat', 'Izin', 'Sakit', 'Alpa'], true)) {
                 $nilai = 'Hadir';
             }
             $bersih[$nama] = $nilai;
@@ -565,7 +632,7 @@ class Sekolah
         }
 
         foreach ($data as $status) {
-            if (! in_array($status, ['Hadir', 'Izin', 'Sakit', 'Alpa'], true)) {
+            if (! in_array($status, ['Hadir', 'Terlambat', 'Izin', 'Sakit', 'Alpa'], true)) {
                 return false;
             }
         }

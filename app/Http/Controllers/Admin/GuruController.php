@@ -26,9 +26,65 @@ class GuruController extends Controller
             }
         }
 
+        $jadwalPerGuru = collect(Sekolah::jadwal())->groupBy('idGuru');
+        $absensiPerGuru = collect(Sekolah::absensiGuru())->groupBy('guruId');
+        $detailGuru = [];
+        foreach (Sekolah::guru() as $guru) {
+            $id = (string) ($guru['id'] ?? '');
+            $rekap = ['Hadir' => 0, 'Terlambat' => 0, 'Izin' => 0, 'Sakit' => 0, 'Alpa' => 0];
+            foreach ($absensiPerGuru->get($id, collect()) as $record) {
+                $status = ($record['status'] ?? '') === 'Alpha' ? 'Alpa' : ($record['status'] ?? '');
+                if (isset($rekap[$status])) {
+                    $rekap[$status]++;
+                }
+            }
+            $presensiTerbaru = ($absensiPerGuru->get($id) ?? collect())
+                ->filter(fn (array $record) => isset($rekap[($record['status'] ?? '') === 'Alpha' ? 'Alpa' : ($record['status'] ?? '')]))
+                ->sortByDesc(fn (array $record) => ($record['tgl'] ?? '').' '.($record['jam'] ?? '00:00'))
+                ->take(5)
+                ->map(fn (array $record) => [
+                    'tanggal' => $record['tgl'] ?? '-',
+                    'jam' => $record['jam'] ?? '-',
+                    'status' => $record['status'] ?? '-',
+                ])
+                ->values()
+                ->all();
+
+            $detailGuru[$id] = [
+                'id' => $id,
+                'nama' => $guru['nama'] ?? '-',
+                'nip' => $guru['nip'] ?? '-',
+                'mapel' => $guru['mapel'] ?? '-',
+                'telepon' => $guru['telepon'] ?? '',
+                'status' => $guru['status'] ?? '-',
+                'email' => $akunGuru[$id]['email'] ?? '',
+                'username' => $akunGuru[$id]['user'] ?? '',
+                'jadwal' => ($jadwalPerGuru->get($id) ?? collect())
+                    ->map(fn (array $slot) => [
+                        'hari' => $slot['hari'] ?? '-',
+                        'jamKe' => $slot['jamKe'] ?? '-',
+                        'kelas' => $slot['kelas'] ?? '-',
+                        'mapel' => $slot['mapel'] ?? '-',
+                        'ruang' => $slot['ruang'] ?? '-',
+                    ])
+                    ->values()
+                    ->all(),
+                'rekap' => [
+                    'Hadir' => $rekap['Hadir'],
+                    'Terlambat' => $rekap['Terlambat'],
+                    'Izin' => $rekap['Izin'],
+                    'Sakit' => $rekap['Sakit'],
+                    'Alpa' => $rekap['Alpa'],
+                ],
+                'presensiTerbaru' => $presensiTerbaru,
+            ];
+        }
+
         return view('admin.guru', [
             'daftar' => Sekolah::guru(),
             'akunGuru' => $akunGuru,
+            'daftarMapel' => collect(Sekolah::guru())->pluck('mapel')->filter()->unique()->sort()->values(),
+            'detailGuru' => $detailGuru,
         ]);
     }
 
@@ -42,6 +98,7 @@ class GuruController extends Controller
             'nip' => ['required', 'string', 'min:10', 'max:30'],
             'nama' => ['required', 'string', 'max:120'],
             'mapel' => ['required', 'string', 'max:80'],
+            'telepon' => ['nullable', 'string', 'max:24', 'regex:/^\+?[0-9\s().-]{8,24}$/'],
             'status' => ['required', 'in:Aktif,Nonaktif'],
             'username' => ['required', 'string', 'min:3', 'max:80'],
             'email' => ['required', 'email', 'max:120'],
@@ -52,6 +109,7 @@ class GuruController extends Controller
             'nip' => 'NIP',
             'nama' => 'Nama',
             'mapel' => 'Mata pelajaran',
+            'telepon' => 'Nomor WhatsApp',
             'username' => 'Username',
             'email' => 'Email',
             'foto' => 'Foto profil',
@@ -118,6 +176,7 @@ class GuruController extends Controller
                         'nip' => $data['nip'],
                         'nama' => $data['nama'],
                         'mapel' => $data['mapel'],
+                        'telepon' => trim((string) ($data['telepon'] ?? '')),
                         'status' => $data['status'],
                         'foto' => $fotoFinal,
                     ]);
@@ -135,6 +194,7 @@ class GuruController extends Controller
                 'nip' => $data['nip'],
                 'nama' => $data['nama'],
                 'mapel' => $data['mapel'],
+                'telepon' => trim((string) ($data['telepon'] ?? '')),
                 'status' => $data['status'],
                 'foto' => $fotoBaru ?? '',
             ];
@@ -203,7 +263,7 @@ class GuruController extends Controller
 
     public function template()
     {
-        $headers = ['nip', 'nama', 'mapel', 'status', 'username', 'email', 'password'];
+        $headers = ['nip', 'nama', 'mapel', 'telepon', 'status', 'username', 'email', 'password'];
         $content = "\xEF\xBB\xBF".implode(',', $headers)."\r\n";
 
         return response($content, 200, [
@@ -258,6 +318,7 @@ class GuruController extends Controller
                 'nip' => ['required', 'string', 'min:10', 'max:30'],
                 'nama' => ['required', 'string', 'max:120'],
                 'mapel' => ['required', 'string', 'max:80'],
+                'telepon' => ['nullable', 'string', 'max:24', 'regex:/^\+?[0-9\s().-]{8,24}$/'],
                 'status' => ['required', 'in:Aktif,Nonaktif'],
                 'username' => ['required', 'string', 'min:3', 'max:80'],
                 'email' => ['required', 'email', 'max:120'],
@@ -309,6 +370,7 @@ class GuruController extends Controller
                 'nip' => $data['nip'],
                 'nama' => $data['nama'],
                 'mapel' => $data['mapel'],
+                'telepon' => trim((string) ($data['telepon'] ?? '')),
                 'status' => $data['status'],
                 'foto' => '',
             ];

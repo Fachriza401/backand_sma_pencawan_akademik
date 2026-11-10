@@ -171,10 +171,10 @@ class PasswordRecoveryController extends Controller
         return redirect()->route('login')->with('status', 'Password berhasil diperbarui. Silakan masuk dengan password baru.');
     }
 
-    public function adminIndex()
+    public function adminIndex(Request $request)
     {
         $this->expireApprovedCodes();
-        $requests = collect($this->store->all())
+        $allRequests = collect($this->store->all())
             ->sortByDesc('createdAt')
             ->take(100)
             ->map(function (array $recovery) {
@@ -186,8 +186,76 @@ class PasswordRecoveryController extends Controller
                 return $recovery;
             })
             ->values();
+        $tab = $request->query('tab') === 'history' ? 'history' : 'pending';
+        $requests = $allRequests->filter(fn (array $item) => $tab === 'pending'
+            ? $item['status'] === 'pending'
+            : $item['status'] !== 'pending')->values();
+        $guruDenganAkun = collect(Sekolah::akun())
+            ->filter(function (array $account) {
+                if (($account['role'] ?? null) !== 'guru' || ($account['aktif'] ?? true) !== true) {
+                    return false;
+                }
 
-        return view('admin.pemulihan-akun', ['requests' => $requests]);
+                $guru = Sekolah::cariGuru($account['guruId'] ?? null);
+
+                return $guru && ($guru['status'] ?? null) === 'Aktif';
+            })
+            ->map(function (array $account) {
+                $guru = Sekolah::cariGuru($account['guruId'] ?? null);
+
+                return [
+                    'id' => $account['guruId'],
+                    'nama' => $guru['nama'] ?? $account['nama'] ?? 'Guru',
+                    'email' => $account['email'] ?? '',
+                ];
+            })
+            ->sortBy('nama')
+            ->values();
+
+        return view('admin.pemulihan-akun', [
+            'requests' => $requests,
+            'tab' => $tab,
+            'jumlahPending' => $allRequests->where('status', 'pending')->count(),
+            'jumlahRiwayat' => $allRequests->where('status', '!=', 'pending')->count(),
+            'guruDenganAkun' => $guruDenganAkun,
+        ]);
+    }
+
+    public function manualReset(Request $request)
+    {
+        $data = $request->validate([
+            'guruId' => ['required', 'string', 'max:20'],
+            'password' => ['required', 'string', 'min:8', 'max:120', 'confirmed'],
+        ], [], [
+            'guruId' => 'Guru',
+            'password' => 'Password baru',
+        ]);
+
+        $accounts = Sekolah::akun();
+        $accountIndex = null;
+        foreach ($accounts as $index => $account) {
+            if (($account['guruId'] ?? null) === $data['guruId'] && ($account['role'] ?? null) === 'guru') {
+                $accountIndex = $index;
+                break;
+            }
+        }
+
+        $guru = Sekolah::cariGuru($data['guruId']);
+        if (
+            $accountIndex === null
+            || ($accounts[$accountIndex]['aktif'] ?? true) !== true
+            || ! $guru
+            || ($guru['status'] ?? null) !== 'Aktif'
+        ) {
+            return back()->withErrors(['guruId' => 'Akun guru aktif tidak ditemukan.'])->withInput($request->except('password', 'password_confirmation'));
+        }
+
+        $accounts[$accountIndex]['pass'] = Hash::make($data['password']);
+        unset($accounts[$accountIndex]['rememberTokenHash'], $accounts[$accountIndex]['rememberExpiresAt']);
+        Sekolah::put('akun', $accounts);
+
+        return redirect()->route('admin.pemulihan-akun')
+            ->with('sukses', 'Password akun '.$guru['nama'].' berhasil direset secara manual.');
     }
 
     public function approve(string $reference)

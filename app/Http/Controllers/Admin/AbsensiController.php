@@ -3,20 +3,32 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\AttendanceAutomation;
 use App\Support\Sekolah;
 use App\Support\XlsxExport;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 class AbsensiController extends Controller
 {
     public function index(Request $request)
     {
+        $otomatisasi = app(AttendanceAutomation::class);
+        $alpaOtomatis = $otomatisasi->markAlpaForToday();
         $semua = Sekolah::absensiGuru();
+        $statusTersedia = $this->statusTersedia();
+        $statusLamaCount = count(array_filter(
+            $semua,
+            fn (array $record) => ! in_array($record['status'] ?? null, $statusTersedia, true)
+        ));
         [$tanggal, $bulan, $tahun] = $this->periode($request, $semua);
         $cari = $this->queryString($request, 'cari');
         $status = $this->queryString($request, 'status');
+        if (! in_array($status, $statusTersedia, true)) {
+            $status = '';
+        }
 
         $filtered = Sekolah::filterAbsensi($semua, $tanggal, $bulan, $tahun, $cari, $status);
         $perPage = 8;
@@ -39,39 +51,31 @@ class AbsensiController extends Controller
             'filterTahun' => $tahun,
             'cari' => $cari,
             'status' => $status,
+            'statusTersedia' => $statusTersedia,
+            'statusLamaCount' => $statusLamaCount,
+            'guruAktif' => array_values(array_filter(
+                Sekolah::guru(),
+                fn (array $guru) => ($guru['status'] ?? '') === 'Aktif'
+            )),
+            'tanggalHariIni' => now()->toDateString(),
+            'jamSekarang' => now()->format('H:i'),
+            'alpaOtomatis' => $alpaOtomatis,
+            'batasAlpa' => $otomatisasi->cutoffForToday(),
             'data' => $paginator,
             'ringkasan' => [
                 'hadir' => $jumlah('Hadir'),
                 'terlambat' => $jumlah('Terlambat'),
                 'izin' => $jumlah('Izin') + $jumlah('Sakit'),
-                'curiga' => $jumlah('Mencurigakan'),
+                'alpa' => $jumlah('Alpa'),
             ],
         ]);
-    }
-
-    public function verifikasi(Request $request)
-    {
-        $request->validate([
-            'id' => ['required', 'integer'],
-            'status' => ['required', 'in:Disetujui,Ditolak'],
-        ]);
-
-        $semua = Sekolah::absensiGuru();
-        foreach ($semua as $i => $a) {
-            if ((int) ($a['id'] ?? 0) === (int) $request->input('id')) {
-                $semua[$i]['verifikasi'] = $request->input('status');
-            }
-        }
-        Sekolah::put('absensi_guru', $semua);
-
-        return back()->with('sukses', 'Verifikasi absensi disimpan.');
     }
 
     public function status(Request $request)
     {
         $data = $request->validate([
             'id' => ['required', 'integer'],
-            'status' => ['required', 'in:'.implode(',', Sekolah::STATUS_ABSENSI)],
+            'status' => ['required', 'in:'.implode(',', $this->statusTersedia())],
         ], [], ['status' => 'Status presensi']);
 
         $semua = Sekolah::absensiGuru();
@@ -91,6 +95,78 @@ class AbsensiController extends Controller
         Sekolah::put('absensi_guru', $semua);
 
         return back()->with('sukses', 'Status presensi berhasil diperbarui.');
+    }
+
+    public function tambahManual(Request $request)
+    {
+        $data = $request->validate([
+            'guruId' => ['required', 'string', 'max:20'],
+            'tgl' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'jam' => ['nullable', 'date_format:H:i'],
+            'status' => ['required', Rule::in(['Hadir', 'Terlambat', 'Izin', 'Sakit', 'Alpa'])],
+        ], [], [
+            'guruId' => 'Guru',
+            'tgl' => 'Tanggal presensi',
+            'jam' => 'Waktu presensi',
+            'status' => 'Status presensi',
+        ]);
+
+        $guru = Sekolah::cariGuru($data['guruId']);
+        if (! $guru || ($guru['status'] ?? '') !== 'Aktif') {
+            return back()->withErrors(['guruId' => 'Pilih guru aktif yang terdaftar.']);
+        }
+
+        if (in_array($data['status'], ['Hadir', 'Terlambat'], true) && empty($data['jam'])) {
+            return back()->withErrors(['jam' => 'Waktu wajib diisi untuk status Hadir atau Terlambat.']);
+        }
+
+        $semua = Sekolah::absensiGuru();
+        $sudahAda = collect($semua)->contains(
+            fn (array $record) => ($record['guruId'] ?? null) === $data['guruId']
+                && ($record['tgl'] ?? null) === $data['tgl']
+        );
+        if ($sudahAda) {
+            return back()->withErrors(['guruId' => 'Guru tersebut sudah memiliki data presensi pada tanggal yang dipilih.']);
+        }
+
+        $id = collect($semua)->max(fn (array $record) => (int) ($record['id'] ?? 0)) + 1;
+        $jam = in_array($data['status'], ['Hadir', 'Terlambat'], true) ? $data['jam'] : null;
+        $semua[] = [
+            'id' => $id,
+            'tgl' => $data['tgl'],
+            'guruId' => $data['guruId'],
+            'jam' => $jam,
+            'status' => $data['status'],
+            'jarak' => null,
+            'verifikasi' => '-',
+            'lat' => null,
+            'lng' => null,
+        ];
+        Sekolah::put('absensi_guru', $semua);
+
+        return back()->with('sukses', 'Kehadiran manual berhasil ditambahkan.');
+    }
+
+    public function rapikanStatusLama()
+    {
+        $statusTersedia = $this->statusTersedia();
+        $semua = Sekolah::absensiGuru();
+        $diperbarui = 0;
+
+        foreach ($semua as $index => $record) {
+            if (! in_array($record['status'] ?? null, $statusTersedia, true)) {
+                $semua[$index]['status'] = 'Belum Hadir';
+                $diperbarui++;
+            }
+        }
+
+        if ($diperbarui === 0) {
+            return back()->with('sukses', 'Tidak ada status lama yang perlu dirapikan.');
+        }
+
+        Sekolah::put('absensi_guru', $semua);
+
+        return back()->with('sukses', "{$diperbarui} status lama diperbarui menjadi Belum Hadir.");
     }
 
     public function hapus(Request $request)
@@ -144,7 +220,6 @@ class AbsensiController extends Controller
                 $a['tgl'] ?? '',
                 ! empty($a['jam']) ? date('H:i', strtotime($a['jam'])) : '',
                 $a['status'] ?? '-',
-                $a['verifikasi'] ?? '-',
             ];
         }
 
@@ -160,13 +235,13 @@ class AbsensiController extends Controller
 
         return XlsxExport::download(
             $namaFile,
-            ['Nama Guru', 'NIP', 'Tanggal', 'Waktu', 'Status', 'Verifikasi'],
+            ['Nama Guru', 'NIP', 'Tanggal', 'Waktu', 'Status'],
             $rows,
             [
                 'title' => 'Absensi Guru',
                 'subtitle' => $subtitle,
                 'sheet' => 'Absensi Guru',
-                'widths' => [28, 24, 14, 12, 18, 16],
+                'widths' => [28, 24, 14, 12, 18],
             ]
         );
     }
@@ -218,6 +293,11 @@ class AbsensiController extends Controller
         $value = $request->query($key);
 
         return is_scalar($value) ? trim((string) $value) : '';
+    }
+
+    private function statusTersedia(): array
+    {
+        return array_values(array_diff(Sekolah::STATUS_ABSENSI, ['Mencurigakan']));
     }
 
     private function hapusBuktiFoto(array $item): void

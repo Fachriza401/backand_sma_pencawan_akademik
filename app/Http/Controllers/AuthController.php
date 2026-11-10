@@ -79,7 +79,7 @@ class AuthController extends Controller
             'user' => $akun['user'],
             'email' => $akun['email'] ?? '',
             'role' => $akun['role'],
-            'nama' => $akun['nama'],
+            'nama' => $akun['role'] === 'admin' ? 'Admin' : $akun['nama'],
             'foto' => $akun['foto'] ?? '',
             'guruId' => $akun['guruId'] ?? null,
         ];
@@ -91,6 +91,13 @@ class AuthController extends Controller
             }
 
             unset($account['rememberTokenHash'], $account['rememberExpiresAt']);
+            if (($account['role'] ?? null) === 'admin') {
+                $account['lastLogin'] = [
+                    'at' => now()->toIso8601String(),
+                    'ip' => (string) ($request->ip() ?? '-'),
+                    'device' => $this->loginDevice((string) $request->userAgent()),
+                ];
+            }
             if ($request->boolean('remember')) {
                 $rememberToken = Str::random(64);
                 $account['rememberTokenHash'] = hash('sha256', $rememberToken);
@@ -140,6 +147,27 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
+    }
+
+    private function loginDevice(string $userAgent): string
+    {
+        $browser = match (true) {
+            str_contains($userAgent, 'Edg/') => 'Edge',
+            str_contains($userAgent, 'Firefox/') => 'Firefox',
+            str_contains($userAgent, 'Chrome/') => 'Chrome',
+            str_contains($userAgent, 'Safari/') => 'Safari',
+            default => 'Browser tidak diketahui',
+        };
+        $platform = match (true) {
+            str_contains($userAgent, 'Android') => 'Android',
+            str_contains($userAgent, 'iPhone'), str_contains($userAgent, 'iPad') => 'iOS',
+            str_contains($userAgent, 'Windows') => 'Windows',
+            str_contains($userAgent, 'Macintosh') => 'macOS',
+            str_contains($userAgent, 'Linux') => 'Linux',
+            default => 'Perangkat tidak diketahui',
+        };
+
+        return $browser.' · '.$platform;
     }
 
     private function redirectByRole()

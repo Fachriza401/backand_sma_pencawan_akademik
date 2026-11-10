@@ -255,8 +255,8 @@ class XlsxExport
             .'xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" '
             .'xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
             .'<dc:title>'.self::escape($title).'</dc:title>'
-            .'<dc:creator>SIGAP SMA Pencawan</dc:creator>'
-            .'<cp:lastModifiedBy>SIGAP SMA Pencawan</cp:lastModifiedBy>'
+            .'<dc:creator>SIAKAD SMA Pencawan</dc:creator>'
+            .'<cp:lastModifiedBy>SIAKAD SMA Pencawan</cp:lastModifiedBy>'
             .'<dcterms:created xsi:type="dcterms:W3CDTF">'.$now.'</dcterms:created>'
             .'<dcterms:modified xsi:type="dcterms:W3CDTF">'.$now.'</dcterms:modified>'
             .'</cp:coreProperties>';

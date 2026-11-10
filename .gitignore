@@ -21,3 +21,12 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# OS
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# Temporary files
+*.log
+*.tmp
