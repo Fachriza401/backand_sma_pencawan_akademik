@@ -9,7 +9,7 @@
 </head>
 <body>
 <div class="guru-shell">
-    <aside class="guru-sidebar">
+    <aside class="guru-sidebar print:hidden">
         <a class="guru-sidebar-brand" href="{{ route('guru.dashboard') }}">
             <img class="tb-logo" src="{{ asset('assets/logo-pencawan.png') }}" alt="">
             <div>
@@ -32,7 +32,7 @@
     </aside>
 
     <div class="guru-main">
-        <header class="guru-topbar">
+        <header class="guru-topbar print:hidden">
             <div class="guru-mobile-brand">
                 <img class="tb-logo" src="{{ asset('assets/logo-pencawan.png') }}" alt="">
                 <div>
@@ -45,12 +45,34 @@
                 <strong>@yield('title', 'SMA Pencawan')</strong>
             </div>
             <div class="guru-topbar-user">
-                <span>{{ session('user.nama', 'Guru') }}</span>
                 <x-notification-menu :url="route('guru.notifikasi')" label="Informasi terbaru" />
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="btn btn-outline btn-sm"><x-icon name="logout" /> Keluar</button>
-                </form>
+                <div class="guru-profile-menu" x-data="{ profileOpen: false }" x-on:click.outside="profileOpen = false" x-on:keydown.escape.window="profileOpen = false">
+                    <button
+                        type="button"
+                        class="guru-profile-trigger"
+                        x-on:click="profileOpen = !profileOpen"
+                        x-bind:aria-expanded="profileOpen.toString()"
+                        aria-controls="guru-profile-dropdown"
+                        aria-haspopup="true"
+                    >
+                        <span class="guru-profile-avatar" aria-hidden="true">{{ mb_substr((string) session('user.nama', 'G'), 0, 1, 'UTF-8') }}</span>
+                        <span class="guru-profile-name">{{ session('user.nama', 'Guru') }}</span>
+                        <svg class="guru-profile-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                    </button>
+                    <div id="guru-profile-dropdown" class="guru-profile-dropdown" x-cloak x-show="profileOpen" x-transition.origin.top.right role="menu">
+                        <div class="guru-profile-dropdown-heading">
+                            <strong>{{ session('user.nama', 'Guru') }}</strong>
+                            <span>Akun Guru</span>
+                        </div>
+                        <a href="{{ route('guru.profil') }}" role="menuitem" x-on:click="profileOpen = false">Profil Saya</a>
+                        <a href="{{ route('guru.profil') }}#keamanan" role="menuitem" x-on:click="profileOpen = false">Ubah Kata Sandi</a>
+                        <div class="guru-profile-dropdown-divider" aria-hidden="true"></div>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="guru-profile-logout" role="menuitem">Keluar / Logout</button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -58,7 +80,7 @@
             @yield('content')
         </main>
 
-        <nav class="bottom-nav" aria-label="Menu guru">
+        <nav class="bottom-nav print:hidden" aria-label="Menu guru">
             <a class="{{ request()->routeIs('guru.dashboard') ? 'active' : '' }}" href="{{ route('guru.dashboard') }}"><x-icon name="home" /> Beranda</a>
             <a class="{{ request()->routeIs('guru.jadwal') ? 'active' : '' }}" href="{{ route('guru.jadwal') }}"><x-icon name="calendar" /> Jadwal</a>
             @if (App\Support\Sekolah::pengaturan()['fiturUnggulanGuruAktif'] ?? true)
@@ -120,5 +142,6 @@
         });
     })();
 </script>
+@vite('resources/js/app.js')
 </body>
 </html>

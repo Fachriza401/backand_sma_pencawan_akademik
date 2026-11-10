@@ -84,7 +84,7 @@ class DashboardController extends Controller
         $classesTaught = Sekolah::kelasDiajar($guru['id']);
         for ($offset = 0; $offset < 7; $offset++) {
             $date = $weekStart->copy()->addDays($offset);
-            $weeklyAttendance['labels'][] = $date->locale('id')->translatedFormat('D');
+            $weeklyAttendance['labels'][] = $date->locale('id')->translatedFormat('l');
             $dailyTotals = ['Hadir' => 0, 'Izin' => 0, 'Sakit' => 0, 'Alpa' => 0];
             foreach ($classesTaught as $kelas) {
                 foreach ($attendanceForDate($kelas, $date->toDateString()) as $status) {

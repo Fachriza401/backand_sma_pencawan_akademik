@@ -14,6 +14,7 @@ use App\Http\Controllers\Guru\DashboardController as GuruDashboardController;
 use App\Http\Controllers\Guru\JadwalController as GuruJadwalController;
 use App\Http\Controllers\Guru\NilaiController;
 use App\Http\Controllers\Guru\PresensiController;
+use App\Http\Controllers\Guru\ProfilController as GuruProfilController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PasswordRecoveryController;
 use Illuminate\Support\Facades\Route;
@@ -78,6 +79,8 @@ Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(functi
 
 Route::middleware(['role:guru'])->prefix('guru')->name('guru.')->group(function () {
     Route::get('/dashboard', [GuruDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/profil', [GuruProfilController::class, 'index'])->name('profil');
+    Route::post('/profil', [GuruProfilController::class, 'update'])->name('profil.update');
     Route::get('/notifikasi', [NotificationController::class, 'guru'])->name('notifikasi');
     Route::get('/jadwal', [GuruJadwalController::class, 'index'])->name('jadwal');
     Route::middleware('teacher-feature')->group(function () {

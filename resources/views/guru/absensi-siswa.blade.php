@@ -233,17 +233,34 @@
             let modalTrigger = null;
 
             document.querySelectorAll('[data-save-feedback-form]').forEach((saveForm) => {
+                const saveButton = saveForm.querySelector('[data-save-feedback-button]');
+                const setSavingState = () => {
+                    if (!saveButton) return;
+                    saveButton.classList.add('is-saving');
+                    saveButton.setAttribute('aria-busy', 'true');
+                    saveButton.querySelector('[data-save-feedback-label]').textContent = 'Menyimpan...';
+                };
+                const resetSavingState = () => {
+                    if (!saveButton) return;
+                    saveButton.classList.remove('is-saving');
+                    saveButton.removeAttribute('aria-busy');
+                    saveButton.querySelector('[data-save-feedback-label]').textContent = 'Simpan Absensi Kelas';
+                };
+
+                saveButton?.addEventListener('pointerdown', setSavingState);
+                saveButton?.addEventListener('click', setSavingState);
+                saveButton?.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') setSavingState();
+                });
+                saveForm.addEventListener('invalid', resetSavingState, true);
                 saveForm.addEventListener('submit', (event) => {
                     if (!saveForm.reportValidity()) {
                         event.preventDefault();
+                        resetSavingState();
                         return;
                     }
 
-                    const button = saveForm.querySelector('[data-save-feedback-button]');
-                    if (!button) return;
-                    button.classList.add('is-saving');
-                    button.setAttribute('aria-busy', 'true');
-                    button.querySelector('[data-save-feedback-label]').textContent = 'Menyimpan...';
+                    setSavingState();
                 });
             });
 

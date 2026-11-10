@@ -741,6 +741,26 @@ table.jadwal-grid th.jam-col, table.jadwal-grid td.jam-col { background: #eef2ff
 .guru-topbar-user form { margin: 0; }
 .guru-topbar-user .btn { color: #475569; }
 .guru-topbar-user .icon { width: 16px; height: 16px; }
+.guru-profile-menu { position: relative; }
+.guru-profile-trigger { display: inline-flex; align-items: center; gap: 9px; max-width: 290px; padding: 5px 8px; border: 1px solid transparent; border-radius: 11px; background: transparent; color: #334155; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: background-color .15s ease, border-color .15s ease; }
+.guru-profile-trigger:hover, .guru-profile-trigger[aria-expanded="true"] { border-color: #e2e8f0; background: #f8fafc; }
+.guru-profile-trigger:focus-visible { outline: 3px solid rgba(37,99,235,.22); outline-offset: 2px; }
+.guru-profile-avatar { display: grid; flex: none; place-items: center; width: 34px; height: 34px; border: 1px solid #bfdbfe; border-radius: 50%; background: #eff6ff; color: #1d4ed8; font-size: 13px; font-weight: 800; }
+.guru-profile-name { overflow: hidden; max-width: 205px; text-overflow: ellipsis; white-space: nowrap; }
+.guru-profile-chevron { flex: none; width: 16px; height: 16px; color: #64748b; transition: transform .15s ease; }
+.guru-profile-trigger[aria-expanded="true"] .guru-profile-chevron { transform: rotate(180deg); }
+.guru-profile-dropdown { position: absolute; top: calc(100% + 8px); right: 0; z-index: 200; width: 250px; max-width: calc(100vw - 24px); padding: 7px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; box-shadow: 0 16px 38px rgba(15,23,42,.16); }
+.guru-profile-dropdown-heading { display: grid; gap: 3px; padding: 9px 10px 11px; margin-bottom: 4px; border-bottom: 1px solid #eef2f7; }
+.guru-profile-dropdown-heading strong { overflow: hidden; color: #1e293b; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.guru-profile-dropdown-heading span { color: #64748b; font-size: 10px; font-weight: 500; }
+.guru-profile-dropdown > a, .guru-profile-logout { display: block; width: 100%; padding: 10px; border: 0; border-radius: 8px; background: transparent; color: #334155; font: inherit; font-size: 12px; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer; }
+.guru-profile-dropdown > a:hover { background: #f1f5f9; color: #1d4ed8; }
+.guru-profile-dropdown-divider { height: 1px; margin: 5px 4px; background: #eef2f7; }
+.guru-profile-logout { color: #dc2626; }
+.guru-profile-logout:hover { background: #fef2f2; color: #b91c1c; }
+.guru-profile-card { max-width: 920px; padding: 22px; border: 1px solid #e3e9f1; border-radius: 16px; background: #fff; box-shadow: 0 7px 22px rgba(26,54,93,.05); }
+.guru-profile-card > section { min-width: 0; }
+.guru-profile-card .admin-profile-actions { margin-top: 16px; }
 .guru-mobile-brand { display: none; align-items: center; gap: 10px; }
 .guru-content {
   width: 100%;
@@ -794,6 +814,8 @@ table.jadwal-grid th.jam-col, table.jadwal-grid td.jam-col { background: #eef2ff
   .guru-mobile-brand { display: flex; }
   .guru-desktop-heading, .guru-topbar-user > span { display: none; }
   .guru-topbar-user { margin-left: auto; }
+  .guru-profile-name { display: none; }
+  .guru-profile-trigger { padding: 4px; }
   .guru-topbar-user .btn { border-color: rgba(255,255,255,.35); }
   .guru-content { padding: 18px 16px 94px; }
   .bottom-nav {
@@ -1992,11 +2014,11 @@ button.jadwal-slot:hover, a.jadwal-slot:hover {
 .guru-progress-icon.progress-green { background: #dcfce7; color: #15803d; }
 .guru-progress-icon.progress-blue { background: #dbeafe; color: #1d4ed8; }
 .guru-progress-arrow { flex: none; color: #94a3b8; font-size: 15px; }
-.guru-analytics-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(260px, .85fr); gap: 16px; }
-.guru-chart-card { min-width: 0; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(15, 23, 42, .04); }
+.guru-analytics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.guru-chart-card { min-width: 0; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; box-shadow: 0 2px 8px rgba(15, 23, 42, .04); }
 .guru-chart-heading .card-title { margin: 0; color: #1e293b; font-size: 15px; }
 .guru-chart-heading p { margin: 5px 0 0; color: #64748b; font-size: 10px; line-height: 1.5; }
-.guru-chart-wrap { position: relative; height: 245px; margin-top: 12px; }
+.guru-chart-wrap { position: relative; width: 100%; max-width: 100%; height: 245px; margin-top: 12px; }
 .guru-doughnut-wrap { position: relative; width: 100%; max-width: 230px; height: 190px; margin: 10px auto 4px; }
 .guru-doughnut-center { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; pointer-events: none; }
 .guru-doughnut-center strong { color: #0f172a; font-size: 24px; }
@@ -2565,6 +2587,9 @@ button.jadwal-slot:hover, a.jadwal-slot:hover {
 .guru-save-button:active,
 .guru-save-button.is-saving,
 .guru-save-button.is-saved { background: #059669; color: #fff; }
+.guru-save-button.is-saving:hover,
+.guru-save-button.is-saving:active,
+.guru-save-button.is-saved:hover { background: #059669; color: #fff; }
 .guru-save-button:focus-visible { outline: 3px solid rgba(37,99,235,.3); outline-offset: 2px; }
 .guru-save-button .icon { color: #fff; stroke-width: 3; }
 .guru-attendance-table { min-width: 760px; }
@@ -3154,3 +3179,130 @@ button.jadwal-slot:hover, a.jadwal-slot:hover {
 .guru-page-card.guru-grade-page-card { margin: 0; }
 .guru-grade-page-card .grade-filter-panel { max-width: none; background: #fff; }
 .guru-grade-context { max-width: none; background: #f8fafc; }
+
+@media print {
+  @page { size: landscape; margin: 8mm; }
+
+  html,
+  body {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  body * {
+    visibility: visible !important;
+    opacity: 1 !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .guru-sidebar,
+  .guru-topbar,
+  .bottom-nav,
+  .toast-stack,
+  .no-print,
+  .student-report-page-head,
+  .student-report-filters,
+  .student-report-summary,
+  .student-report-card > :not(.student-report-table-wrap) {
+    display: none !important;
+  }
+
+  .guru-shell,
+  .guru-main,
+  .guru-content,
+  .student-report-card,
+  .student-report-table-wrap {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .guru-content > :not(.student-report-card) {
+    display: none !important;
+  }
+
+  .student-report-table {
+    display: table !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    table-layout: fixed !important;
+    border: 1px solid #475569 !important;
+    border-collapse: collapse !important;
+    color: #000 !important;
+    background: #fff !important;
+    font-size: 8pt !important;
+    opacity: 1 !important;
+  }
+
+  .student-report-table thead { display: table-header-group !important; }
+  .student-report-table tbody { display: table-row-group !important; }
+  .student-report-table tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .student-report-table th,
+  .student-report-table td {
+    min-width: 0 !important;
+    padding: 5px 4px !important;
+    border: 1px solid #475569 !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 8pt !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+    text-align: center !important;
+    text-decoration: none !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+    opacity: 1 !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .student-report-table th:nth-child(1),
+  .student-report-table td:nth-child(1) { width: 6% !important; }
+  .student-report-table th:nth-child(2),
+  .student-report-table td:nth-child(2) { width: 26% !important; text-align: left !important; }
+  .student-report-table th:nth-child(3),
+  .student-report-table td:nth-child(3),
+  .student-report-table th:nth-child(4),
+  .student-report-table td:nth-child(4),
+  .student-report-table th:nth-child(5),
+  .student-report-table td:nth-child(5),
+  .student-report-table th:nth-child(6),
+  .student-report-table td:nth-child(6) { width: 8% !important; }
+  .student-report-table th:nth-child(7),
+  .student-report-table td:nth-child(7) { width: 16% !important; }
+  .student-report-table th:nth-child(8),
+  .student-report-table td:nth-child(8) { width: 20% !important; }
+
+  .student-report-table .student-report-name,
+  .student-report-table .student-report-total,
+  .student-report-table .student-report-percent {
+    border-color: #475569 !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-weight: 700 !important;
+  }
+}

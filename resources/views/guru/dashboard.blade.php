@@ -136,8 +136,8 @@
                 <div class="guru-chart-heading">
                     <div>
                         <span class="guru-section-kicker">KEHADIRAN SISWA</span>
-                        <h2 class="card-title">Tren Mingguan</h2>
-                        <p>Rekap status siswa pada kelas yang diampu, Senin sampai Minggu.</p>
+                        <h2 class="card-title">Tren Mingguan Kehadiran Siswa</h2>
+                        <p>Tren status kehadiran kelas yang diampu, Senin sampai Minggu.</p>
                     </div>
                 </div>
                 <div class="guru-chart-wrap">
@@ -252,39 +252,97 @@
                 return;
             }
 
+            const createChart = (canvas, config) => {
+                const existingChart = Chart.getChart(canvas);
+                if (existingChart) existingChart.destroy();
+
+                return new Chart(canvas, config);
+            };
+
             if (weeklyCanvas) {
-                new Chart(weeklyCanvas, {
-                    type: 'bar',
+                createChart(weeklyCanvas, {
+                    type: 'line',
                     data: {
                         labels: @json($weeklyAttendance['labels']),
                         datasets: [
-                            { label: 'Hadir', data: @json($weeklyAttendance['hadir']), backgroundColor: '#16a34a', borderRadius: 4 },
-                            { label: 'Izin', data: @json($weeklyAttendance['izin']), backgroundColor: '#3b82f6', borderRadius: 4 },
-                            { label: 'Sakit', data: @json($weeklyAttendance['sakit']), backgroundColor: '#f59e0b', borderRadius: 4 },
-                            { label: 'Alpa', data: @json($weeklyAttendance['alpa']), backgroundColor: '#e11d48', borderRadius: 4 },
+                            {
+                                label: 'Hadir',
+                                data: @json($weeklyAttendance['hadir']),
+                                borderColor: '#2563eb',
+                                backgroundColor: '#2563eb',
+                                pointBackgroundColor: '#2563eb',
+                                pointBorderColor: '#fff',
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                borderWidth: 3,
+                                tension: 0.3,
+                            },
+                            {
+                                label: 'Izin',
+                                data: @json($weeklyAttendance['izin']),
+                                borderColor: '#f59e0b',
+                                backgroundColor: '#f59e0b',
+                                pointBackgroundColor: '#f59e0b',
+                                pointRadius: 3,
+                                pointHoverRadius: 5,
+                                borderWidth: 2,
+                                tension: 0.3,
+                            },
+                            {
+                                label: 'Sakit',
+                                data: @json($weeklyAttendance['sakit']),
+                                borderColor: '#0ea5e9',
+                                backgroundColor: '#0ea5e9',
+                                pointBackgroundColor: '#0ea5e9',
+                                pointRadius: 3,
+                                pointHoverRadius: 5,
+                                borderWidth: 2,
+                                tension: 0.3,
+                            },
+                            {
+                                label: 'Alpa',
+                                data: @json($weeklyAttendance['alpa']),
+                                borderColor: '#e11d48',
+                                backgroundColor: '#e11d48',
+                                pointBackgroundColor: '#e11d48',
+                                pointRadius: 3,
+                                pointHoverRadius: 5,
+                                borderWidth: 2,
+                                tension: 0.3,
+                            },
                         ],
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         interaction: { mode: 'index', intersect: false },
-                        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, padding: 14 } } },
+                        plugins: {
+                            legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, padding: 14 } },
+                            tooltip: { enabled: true },
+                        },
                         scales: {
-                            x: { stacked: true, grid: { display: false } },
-                            y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#e2e8f0' } },
+                            x: { grid: { display: false } },
+                            y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#e2e8f0' } },
                         },
                     },
                 });
             }
 
             if (progressCanvas) {
-                new Chart(progressCanvas, {
+                const progressValues = [
+                    @json((int) $jumlahAbsensiKelasTerisi),
+                    @json((int) $jumlahAbsensiKelasPending),
+                ];
+                const progressTotal = progressValues.reduce((total, value) => total + value, 0);
+
+                createChart(progressCanvas, {
                     type: 'doughnut',
                     data: {
                         labels: ['Selesai', 'Belum diisi'],
                         datasets: [{
-                            data: [{{ $jumlahAbsensiKelasTerisi }}, {{ $jumlahAbsensiKelasPending }}],
+                            data: progressValues,
                             backgroundColor: ['#16a34a', '#e2e8f0'],
+                            hoverBackgroundColor: ['#15803d', '#cbd5e1'],
                             borderWidth: 0,
                             hoverOffset: 5,
                         }],
@@ -293,7 +351,22 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         cutout: '76%',
-                        plugins: { legend: { display: false } },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                enabled: true,
+                                callbacks: {
+                                    label: (context) => {
+                                        const value = Number(context.raw) || 0;
+                                        const percentage = progressTotal > 0
+                                            ? Math.round((value / progressTotal) * 100)
+                                            : 0;
+
+                                        return `${context.label}: ${value} (${percentage}%)`;
+                                    },
+                                },
+                            },
+                        },
                     },
                 });
             }

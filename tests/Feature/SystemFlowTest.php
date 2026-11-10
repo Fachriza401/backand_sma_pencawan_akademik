@@ -535,10 +535,18 @@ class SystemFlowTest extends TestCase
             ->assertSee('Belum presensi')
             ->assertSee('Presensi Sekarang')
             ->assertSee('Total ')
-            ->assertSee('Tren Mingguan')
+            ->assertSee('Tren Mingguan Kehadiran Siswa')
             ->assertSee('Absensi Kelas Hari Ini')
             ->assertSee('guru-weekly-attendance-chart', false)
             ->assertSee('guru-teaching-progress-chart', false)
+            ->assertSee("type: 'line'", false)
+            ->assertSee('tension: 0.3', false)
+            ->assertSee('pointRadius: 4', false)
+            ->assertSee('Senin')
+            ->assertSee('Minggu')
+            ->assertSee('Chart.getChart(canvas)', false)
+            ->assertSee('progressTotal', false)
+            ->assertSee('tooltip: {', false)
             ->assertSee('data-presence-open', false)
             ->assertSee('Versi 1.0.0 - Development');
         $this->get(route('guru.nilai'))
@@ -1160,7 +1168,8 @@ class SystemFlowTest extends TestCase
             ->assertSee('Simpan Absensi Kelas')
             ->assertSee('guru-save-button', false)
             ->assertSee('class="btn btn-primary guru-save-button', false)
-            ->assertSee("button.classList.add('is-saving')", false)
+            ->assertSee("saveButton.classList.add('is-saving')", false)
+            ->assertSee("saveButton?.addEventListener('pointerdown', setSavingState)", false)
             ->assertSee('id="student-form-modal"', false)
             ->assertSee('role="dialog"', false)
             ->assertSee('data-student-modal-close', false)
@@ -1278,6 +1287,7 @@ class SystemFlowTest extends TestCase
             ->assertSee('id="grade-report-preview"', false)
             ->assertSee('Nilai Akhir Semester')
             ->assertSee('Catatan Rapor / Capaian Kompetensi')
+            ->assertSee("saveButton?.addEventListener('pointerdown', setSavingState)", false)
             ->assertSee('guru-save-button is-saved', false)
             ->assertSee('guru-grade-page-card', false)
             ->assertDontSee('href="'.route('guru.rapor', ['kelas' => 'X-1', 'mapel' => 'Matematika']).'"', false);
@@ -1342,8 +1352,19 @@ class SystemFlowTest extends TestCase
             ->assertSee('Persentase Kehadiran (%)')
             ->assertSee('student-report-table', false)
             ->assertSee('student-report-print-area', false)
+            ->assertSee('student-report-actions no-print print:hidden', false)
+            ->assertSee('no-print print:hidden student-report-filters', false)
+            ->assertSee('guru-sidebar print:hidden', false)
+            ->assertSee('guru-topbar print:hidden', false)
+            ->assertSee('bottom-nav print:hidden', false)
             ->assertDontSee('student-report-calendar', false)
             ->assertDontSee('attendance-calendar');
+
+        $printStyles = file_get_contents(public_path('css/style.css'));
+        $this->assertIsString($printStyles);
+        $this->assertStringContainsString('@page { size: landscape; margin: 8mm; }', $printStyles);
+        $this->assertStringContainsString('overflow-wrap: anywhere !important;', $printStyles);
+        $this->assertStringContainsString('table-layout: fixed !important;', $printStyles);
 
         $export = $this->get(route('guru.rapor.ekspor', [
             'kelas' => 'X-1',
@@ -1357,5 +1378,64 @@ class SystemFlowTest extends TestCase
         $this->assertStringContainsString('Total Kehadiran', $reportSheet);
         $this->assertStringContainsString('Persentase Kehadiran', $reportSheet);
         $this->assertStringContainsString('Adi Nugroho', $reportSheet);
+    }
+
+    public function test_teacher_profile_dropdown_and_account_settings_are_functional(): void
+    {
+        $teacherSession = [
+            'role' => 'guru',
+            'user' => 'guru',
+            'nama' => 'Budi Santoso, S.Pd.',
+            'email' => 'guru@acsupply.com',
+            'guruId' => 'G01',
+        ];
+        $this->withSession(['user' => $teacherSession])
+            ->get(route('guru.dashboard'))
+            ->assertOk()
+            ->assertSee('x-data="{ profileOpen: false }"', false)
+            ->assertSee('x-on:click.outside="profileOpen = false"', false)
+            ->assertSee(route('guru.profil'), false)
+            ->assertSee(route('guru.profil').'#keamanan', false)
+            ->assertSee(route('logout'), false)
+            ->assertSee('Keluar / Logout');
+
+        $this->get(route('guru.profil'))
+            ->assertOk()
+            ->assertSee('Profil Saya')
+            ->assertSee('Informasi Guru')
+            ->assertSee('Ubah Kata Sandi')
+            ->assertSee('name="current_password"', false);
+
+        $this->from(route('guru.profil'))
+            ->post(route('guru.profil.update'), [
+                'nama' => 'Budi Santoso, S.Pd.',
+                'email' => 'guru@acsupply.com',
+                'telepon' => '081234567890',
+                'current_password' => 'wrong-password',
+                'password' => 'PasswordBaru123',
+                'password_confirmation' => 'PasswordBaru123',
+            ])
+            ->assertSessionHasErrors('current_password');
+        $this->assertSame('Budi Santoso, S.Pd.', Sekolah::cariGuru('G01')['nama']);
+
+        $this->post(route('guru.profil.update'), [
+            'nama' => 'Budi Santoso, S.Pd. Baru',
+            'email' => 'budi.baru@acsupply.com',
+            'telepon' => '081234567890',
+            'current_password' => 'guru123',
+            'password' => 'PasswordBaru123',
+            'password_confirmation' => 'PasswordBaru123',
+        ])
+            ->assertRedirect(route('guru.profil'))
+            ->assertSessionHas('sukses', 'Profil berhasil diperbarui.')
+            ->assertSessionHas('user.nama', 'Budi Santoso, S.Pd. Baru')
+            ->assertSessionHas('user.email', 'budi.baru@acsupply.com');
+
+        $this->assertSame('081234567890', Sekolah::cariGuru('G01')['telepon']);
+        $this->assertTrue(Hash::check('PasswordBaru123', Sekolah::cariAkun('guru')['pass']));
+
+        $this->withSession(['user' => ['role' => 'admin', 'user' => 'admin']])
+            ->get(route('guru.profil'))
+            ->assertRedirect(route('admin.dashboard'));
     }
 }

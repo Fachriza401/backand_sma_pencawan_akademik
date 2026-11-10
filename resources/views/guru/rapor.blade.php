@@ -9,7 +9,7 @@
             <h2>Laporan Absensi Siswa</h2>
             <p>{{ $kelas }} · {{ \Illuminate\Support\Carbon::createFromFormat('Y-m', $bulan)->locale('id')->translatedFormat('F Y') }}</p>
         </div>
-        <div class="student-report-actions no-print">
+        <div class="student-report-actions no-print print:hidden">
             <a class="btn btn-hijau" href="{{ route('guru.rapor.ekspor', ['kelas' => $kelas, 'bulan' => $bulan]) }}">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4.5h10l5 5v10H4z"/><path d="M8 4.5v6h7v-6M8 19v-5h8v5M14 4.5v5h5"/></svg>
                 Ekspor XLSX
@@ -21,7 +21,7 @@
         </div>
     </div>
 
-    <div class="card no-print student-report-filters student-report-full-width">
+    <div class="card no-print print:hidden student-report-filters student-report-full-width">
         <form method="GET" action="{{ route('guru.rapor') }}" class="guru-filter-panel grade-filter-panel">
             <div class="form-group">
                 <label class="form-label" for="kelas">Kelas</label>
